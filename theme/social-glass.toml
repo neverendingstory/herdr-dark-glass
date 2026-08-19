@@ -1,0 +1,74 @@
+# Herdr Social Glass — screenshot-friendly native preset
+# Uses only Herdr 0.8.0 built-ins; no third-party plugins.
+onboarding = false
+
+[theme]
+name = "catppuccin-latte"
+auto_switch = false
+
+# Let the outer Terminal profile provide the translucent glass surface.
+[theme.custom]
+panel_bg = "reset"
+accent = "#7287fd"
+red = "#d20f39"
+green = "#40a02b"
+
+[terminal]
+new_cwd = "follow"
+
+[ui]
+# A deliberate information rail: wide enough to read in compressed social images.
+sidebar_width = 29
+sidebar_min_width = 25
+sidebar_max_width = 33
+sidebar_start_collapsed = false
+sidebar_collapsed_mode = "hidden"
+
+# Cleaner canvas with product-like spacing.
+mouse_capture = true
+copy_on_select = true
+redraw_on_focus_gained = false
+confirm_close = true
+pane_borders = true
+pane_scrollbars = false
+pane_gaps = true
+show_agent_labels_on_pane_borders = true
+hide_tab_bar_when_single_tab = false
+tab_bar_position = "top"
+agent_panel_sort = "spaces"
+accent = "#7287fd"
+
+# Two-line agent cards remain legible after screenshots are downscaled.
+[ui.sidebar.agents]
+row_gap = 1
+rows = [
+  [
+    { token = "state_icon" },
+    { token = "agent", fg = "#4c4f69", bold = true },
+    { token = "state_text", fg = "#6c6f85", dim = true },
+  ],
+  [
+    { token = "workspace", fg = "#1e66f5", bold = true },
+    { token = "tab", fg = "#8839ef" },
+  ],
+]
+
+# Workspace cards expose useful Git context without adding a plugin.
+[ui.sidebar.spaces]
+row_gap = 1
+rows = [
+  [
+    { token = "state_icon" },
+    { token = "workspace", fg = "#4c4f69", bold = true },
+  ],
+  [
+    { token = "branch", fg = "#179299" },
+    { token = "git_status", fg = "#df8e1d", bold = true },
+  ],
+]
+
+[ui.toast]
+delivery = "off"
+
+[ui.sound]
+enabled = false

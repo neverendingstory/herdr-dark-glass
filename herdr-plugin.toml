@@ -1,0 +1,34 @@
+id = "linyu.social-glass"
+name = "Herdr Social Glass"
+version = "1.0.0"
+min_herdr_version = "0.8.0"
+description = "A screenshot-friendly Catppuccin Latte glass theme and macOS Terminal launcher for Herdr."
+platforms = ["macos"]
+
+[[actions]]
+id = "apply"
+title = "Apply Social Glass theme"
+command = ["bash", "scripts/apply.sh"]
+
+[[actions]]
+id = "restore"
+title = "Restore pre-theme config"
+command = ["bash", "scripts/restore.sh"]
+
+[[actions]]
+id = "open-window"
+title = "Open Social Glass Terminal window"
+command = ["bash", "scripts/open-social-window.sh"]
+
+[[actions]]
+id = "status"
+title = "Show Social Glass status"
+command = ["bash", "scripts/status.sh"]
+
+[[panes]]
+id = "guide"
+title = "Social Glass Guide"
+placement = "popup"
+width = "78%"
+height = "72%"
+command = ["bash", "scripts/guide.sh"]

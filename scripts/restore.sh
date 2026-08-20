@@ -8,7 +8,7 @@ BASELINE="$STATE_DIR/baseline-config.toml"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 
 if [[ ! -f "$BASELINE" ]]; then
-  echo "No baseline config exists. Run the apply action once before restore." >&2
+  echo "Restore is unavailable because no pre-theme Herdr config was captured as a baseline." >&2
   exit 1
 fi
 

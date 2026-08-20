@@ -1,17 +1,33 @@
 # Herdr Social Glass
 
-A screenshot-friendly light glass preset packaged as a local Herdr 0.8.0 plugin.
-It uses only Herdr's built-in Catppuccin Latte theme and macOS Terminal's existing
-`Clear Light` profile. It installs no third-party runtime or theme dependency.
+Herdr Social Glass is a screenshot-friendly workspace preset for Herdr on macOS. It combines a translucent Terminal surface with an editorial Herdr layout, using only Herdr's built-in Catppuccin Latte theme and the existing macOS Terminal `Clear Light` profile.
 
-## Visual system
+![Social Glass window frame](assets/window-frame.png)
 
-- translucent outer Terminal surface with native macOS blur and rounded chrome
-- Catppuccin Latte UI with a lavender accent
-- transparent Herdr panel background so the outer glass surface remains visible
-- clean pane gaps and borders, no pane scrollbars
-- top tab bar and a fully hidden collapsed sidebar
-- two-line agent/workspace cards when the sidebar is expanded
+## Design language
+
+- **Soft transparency** — our visual language uses restrained blur and translucency to keep the desktop present without competing with the work.
+- **Editorial structure** — a clear reading order, generous spacing, and deliberate pane proportions turn a terminal workspace into a composed canvas.
+- **Hairline architecture** — fine pane borders and gaps provide structure without visual weight.
+- **Lavender signal** — a focused accent color identifies active controls and agent state.
+- **Visible collaboration** — pane titles, status lines, and the optional agent sidebar make roles and progress legible in screenshots.
+
+![Social Glass plugin actions](assets/plugin-actions.png)
+
+## Requirements
+
+- macOS
+- Herdr 0.8.0 or newer
+- macOS Terminal with the built-in `Clear Light` profile for the `open-window` action
+- Bash and AppleScript, both included with macOS
+
+## Install
+
+Review the trust and configuration notes below, then install from GitHub:
+
+```bash
+herdr plugin install ythx-101/herdr-social-glass
+```
 
 ## Actions
 
@@ -22,37 +38,52 @@ herdr plugin action invoke status --plugin linyu.social-glass
 herdr plugin action invoke restore --plugin linyu.social-glass
 ```
 
-Open the in-Herdr guide:
+Open the guide inside Herdr:
 
 ```bash
 herdr plugin pane open --plugin linyu.social-glass --entrypoint guide
 ```
 
-## Local installation
+### What each action does
+
+- `apply` validates the bundled preset, backs up the current Herdr configuration when one exists, replaces the full configuration with the preset, and asks Herdr to reload it.
+- `open-window` opens macOS Terminal with the `Clear Light` profile and starts Herdr in that window. It does not modify the Terminal profile.
+- `status` reports the Herdr version and whether the active configuration exactly matches the bundled preset.
+- `restore` backs up the current configuration, restores the saved pre-theme baseline, and asks Herdr to reload it.
+
+## Trust, security, and configuration safety
+
+A Herdr plugin can execute local commands. This plugin runs the readable shell scripts in [`scripts/`](scripts/) and uses AppleScript only to open and arrange a macOS Terminal window. Inspect the manifest and scripts before installing if you do not trust the source. The plugin has no third-party runtime or theme dependency and does not request network credentials.
+
+The `apply` action intentionally replaces the **entire** Herdr configuration; it does not merge individual theme keys. Before replacement, it stores a timestamped copy of the current configuration in Herdr's local plugin-state area. The first apply that finds an existing configuration also records it as the restore baseline. Later applies keep that original baseline and add new timestamped backups. If no configuration exists, apply creates one without a baseline; `restore` remains unavailable until a baseline exists.
+
+If Herdr rejects the new configuration during `apply`, the script restores the immediate backup (or removes the newly created configuration when none existed) and reloads again. The `restore` action copies the saved baseline back as the full active configuration after first backing up the current file. If that reload fails, the restored baseline remains on disk for inspection. Uninstalling the plugin does not itself restore the old configuration, so invoke `restore` first if you want to return to the baseline.
+
+Backups are local copies of the full Herdr configuration and may therefore contain the same private values as that configuration. Protect and remove them according to your own local security policy.
+
+## Local tests
+
+From the repository root:
 
 ```bash
-herdr plugin link ~/projects/herdr-social-glass
+bash tests/smoke.sh
+bash -n scripts/*.sh
+git diff --check
 ```
 
-The first `apply` action saves the current Herdr config as the restore baseline.
-Every later apply/restore action also creates a timestamped backup in the plugin
-state directory. The preset replaces `~/.config/herdr/config.toml` intentionally;
-use the restore action to return to the baseline.
+The smoke test parses the manifest and theme, checks the plugin ID and minimum Herdr version, verifies all four actions are present, and checks the key Social Glass theme settings.
 
-## Screenshot recipe
+## Project files
 
-1. Open the Social Glass Terminal window.
-2. Keep at most two panes visible; use `Ctrl+B`, then `Z` for a single-pane feature shot.
-3. Use `Ctrl+B`, then `B` when the expanded agent sidebar adds useful context.
-4. Capture with 8–12% of the colorful desktop visible outside the window.
-5. Avoid raw logs, secrets, compaction notices, and very long paths in the frame.
-6. Increase Terminal text size once or twice before captures intended for mobile feeds.
-
-## Files
-
-- `theme/social-glass.toml` — portable Herdr preset
+- `herdr-plugin.toml` — plugin metadata, actions, and guide entry point
+- `theme/social-glass.toml` — the complete Herdr preset
 - `scripts/apply.sh` — validate, back up, apply, and reload
 - `scripts/restore.sh` — restore the original baseline
 - `scripts/open-social-window.sh` — open Terminal with the `Clear Light` profile
 - `scripts/status.sh` — report whether the preset is active
-- `scripts/guide.sh` — popup guide inside Herdr
+- `scripts/guide.sh` — display this guide inside Herdr
+- `tests/smoke.sh` — local manifest, syntax, and preset checks
+
+## License
+
+MIT. See [LICENSE](LICENSE).

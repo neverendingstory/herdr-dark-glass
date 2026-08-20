@@ -10,7 +10,9 @@ import sys, tomllib
 manifest = tomllib.load(open(sys.argv[1], "rb"))
 theme = tomllib.load(open(sys.argv[2], "rb"))
 assert manifest["id"] == "linyu.social-glass"
+assert manifest["version"] == "1.0.0"
 assert manifest["min_herdr_version"] == "0.8.0"
+assert manifest["platforms"] == ["macos"]
 assert len(manifest["actions"]) == 4
 assert theme["theme"]["name"] == "catppuccin-latte"
 assert theme["theme"]["custom"]["panel_bg"] == "reset"

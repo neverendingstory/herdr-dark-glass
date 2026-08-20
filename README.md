@@ -2,7 +2,7 @@
 
 Herdr Social Glass is a screenshot-friendly workspace preset for Herdr on macOS. It combines a translucent Terminal surface with an editorial Herdr layout, using only Herdr's built-in Catppuccin Latte theme and the existing macOS Terminal `Clear Light` profile.
 
-![Social Glass window frame](assets/window-frame.png)
+![Herdr Social Glass workspace](assets/social-glass-workspace.jpg)
 
 ## Design language
 

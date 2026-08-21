@@ -1,5 +1,5 @@
 # Herdr Social Glass — screenshot-friendly native preset
-# Uses only Herdr 0.8.0 built-ins; no third-party plugins.
+# Uses only Herdr built-ins; no third-party plugins.
 onboarding = false
 
 [theme]
@@ -17,6 +17,10 @@ green = "#40a02b"
 new_cwd = "follow"
 
 [ui]
+# Generic public default. scripts/apply-preset.sh safely replaces this with the
+# optional local window-title.txt value from HERDR_PLUGIN_CONFIG_DIR.
+window_title = "Herdr Social Glass"
+
 # A deliberate information rail: wide enough to read in compressed social images.
 sidebar_width = 29
 sidebar_min_width = 25

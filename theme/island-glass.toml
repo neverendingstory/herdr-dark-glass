@@ -1,0 +1,90 @@
+# Herdr Island Glass — warm, card-like native preset
+# Uses only Herdr 0.8.2 built-ins; no third-party plugins or game assets.
+onboarding = false
+
+[theme]
+name = "catppuccin-latte"
+auto_switch = false
+
+[theme.custom]
+sidebar_bg = "#F1EAD8"
+active_row_bg = "#E3EFCF"
+selection_bg = "#F3D77D"
+panel_bg = "reset"
+surface_dim = "#E8DDC5"
+surface0 = "#E9DFC9"
+surface1 = "#DED1B8"
+overlay0 = "#A89578"
+overlay1 = "#8E7A60"
+text = "#5B4636"
+subtext0 = "#7B6750"
+accent = "#4F7D2A"
+blue = "#2FAFA0"
+mauve = "#2FAFA0"
+green = "#68A942"
+yellow = "#D6A53A"
+peach = "#D6A53A"
+red = "#D86D5F"
+
+[terminal]
+new_cwd = "follow"
+
+[ui]
+# Generic public default; optional local personalization is injected as data.
+window_title = "Herdr Island Glass"
+sidebar_width = 32
+sidebar_min_width = 28
+sidebar_max_width = 36
+sidebar_start_collapsed = false
+sidebar_collapsed_mode = "hidden"
+mouse_capture = true
+copy_on_select = true
+redraw_on_focus_gained = false
+confirm_close = true
+pane_borders = true
+pane_scrollbars = false
+pane_gaps = true
+show_agent_labels_on_pane_borders = true
+hide_tab_bar_when_single_tab = false
+tab_bar_position = "top"
+tab_bar_right = [
+  { type = "text", text = "QINGYUE LAB" },
+  { type = "datetime", format = "%m/%d %H:%M" },
+]
+tab_bar_right_separator = " · "
+agent_panel_sort = "spaces"
+status_indicators = "symbols"
+accent = "#4F7D2A"
+
+[ui.sidebar.agents]
+row_gap = 1
+rows = [
+  [
+    { token = "state_icon" },
+    { token = "agent", fg = "#5B4636", bold = true },
+    { token = "state_text", fg = "#2FAFA0", bold = true },
+  ],
+  [
+    { token = "workspace", fg = "#68A942", bold = true },
+    { token = "tab", fg = "#7B6048" },
+  ],
+]
+
+[ui.sidebar.spaces]
+row_gap = 1
+rows = [
+  [
+    { token = "state_icon" },
+    { token = "workspace", fg = "#5B4636", bold = true },
+  ],
+  [
+    { token = "branch", fg = "#2FAFA0" },
+    { token = "git_status", fg = "#D6A53A", bold = true },
+  ],
+]
+
+[ui.toast]
+delivery = "off"
+
+[ui.sound]
+enabled = false

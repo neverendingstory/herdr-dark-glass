@@ -1,0 +1,76 @@
+# Herdr Dark Glass — dark transparent native preset
+onboarding = false
+
+[theme]
+name = "catppuccin"
+auto_switch = false
+
+[theme.custom]
+sidebar_bg = "transparent"
+active_row_bg = "#29332D"
+selection_bg = "#3A463E"
+panel_bg = "transparent"
+surface_dim = "#151E1A"
+surface0 = "#202A25"
+surface1 = "#29332D"
+overlay0 = "#87918C"
+overlay1 = "#A2AAA5"
+text = "#F5F3ED"
+subtext0 = "#B9BEB9"
+accent = "#B7D6A3"
+blue = "#8BD5FF"
+mauve = "#C4A7E7"
+green = "#A6D189"
+yellow = "#E5C890"
+peach = "#E5C890"
+red = "#E78284"
+
+[terminal]
+new_cwd = "follow"
+
+[ui]
+# Generic public default; optional local personalization is injected as data.
+window_title = "Herdr Dark Glass"
+sidebar_width = 32
+sidebar_min_width = 28
+sidebar_max_width = 36
+sidebar_start_collapsed = false
+sidebar_collapsed_mode = "hidden"
+mouse_capture = true
+copy_on_select = true
+redraw_on_focus_gained = false
+confirm_close = true
+pane_borders = true
+pane_scrollbars = false
+pane_gaps = true
+show_agent_labels_on_pane_borders = true
+hide_tab_bar_when_single_tab = false
+tab_bar_position = "top"
+tab_bar_right = [
+  { type = "text", text = "DARK GLASS" },
+  { type = "datetime", format = "%m/%d %H:%M" },
+]
+tab_bar_right_separator = " · "
+agent_panel_sort = "spaces"
+status_indicators = "symbols"
+accent = "#B7D6A3"
+
+[ui.sidebar.agents]
+row_gap = 1
+rows = [
+  [{ token = "state_icon" }, { token = "agent", fg = "#F5F3ED", bold = true }, { token = "state_text", fg = "#8BD5FF", bold = true }],
+  [{ token = "workspace", fg = "#A6D189", bold = true }, { token = "tab", fg = "#C4A7E7" }],
+]
+
+[ui.sidebar.spaces]
+row_gap = 1
+rows = [
+  [{ token = "state_icon" }, { token = "workspace", fg = "#F5F3ED", bold = true }],
+  [{ token = "branch", fg = "#8BD5FF" }, { token = "git_status", fg = "#E5C890", bold = true }],
+]
+
+[ui.toast]
+delivery = "off"
+
+[ui.sound]
+enabled = false

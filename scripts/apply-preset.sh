@@ -9,8 +9,8 @@ CONFIG_FILE="${HERDR_CONFIG_PATH:-$HOME/.config/herdr/config.toml}"
 TITLE_FILE="$CONFIG_DIR/window-title.txt"
 
 usage() {
-  echo 'usage: apply-preset.sh <social-glass|island-glass>' >&2
-  echo '       apply-preset.sh --render <social-glass|island-glass> <output>' >&2
+  echo 'usage: apply-preset.sh <social-glass|island-glass|dark-glass>' >&2
+  echo '       apply-preset.sh --render <social-glass|island-glass|dark-glass> <output>' >&2
   exit 2
 }
 
@@ -19,10 +19,17 @@ resolve_preset() {
     social-glass)
       PRESET="$ROOT/theme/social-glass.toml"
       DISPLAY_NAME="Social Glass"
+      EXPECTED_BASE_THEME="catppuccin-latte"
       ;;
     island-glass)
       PRESET="$ROOT/theme/island-glass.toml"
       DISPLAY_NAME="Island Glass"
+      EXPECTED_BASE_THEME="catppuccin-latte"
+      ;;
+    dark-glass)
+      PRESET="$ROOT/theme/dark-glass.toml"
+      DISPLAY_NAME="Dark Glass"
+      EXPECTED_BASE_THEME="catppuccin"
       ;;
     *) usage ;;
   esac
@@ -57,7 +64,7 @@ render_preset() {
   escaped_title="${escaped_title//\"/\\\"}"
 
   [[ -s "$PRESET" ]] || { echo "$DISPLAY_NAME preset is missing: $PRESET" >&2; exit 1; }
-  grep -Fq 'name = "catppuccin-latte"' "$PRESET" || { echo "$DISPLAY_NAME preset has an invalid base theme: $PRESET" >&2; exit 1; }
+  grep -Fq "name = \"$EXPECTED_BASE_THEME\"" "$PRESET" || { echo "$DISPLAY_NAME preset has an invalid base theme: $PRESET" >&2; exit 1; }
 
   : > "$output_tmp"
   chmod 600 "$output_tmp"

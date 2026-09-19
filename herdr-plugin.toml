@@ -1,8 +1,8 @@
 id = "linyu.social-glass"
 name = "Herdr Social Glass"
-version = "1.1.0"
+version = "1.2.0"
 min_herdr_version = "0.8.2"
-description = "Two screenshot-friendly Catppuccin Latte workspace themes and macOS Terminal launchers for Herdr."
+description = "Three screenshot-friendly workspace themes and macOS Terminal launchers for Herdr, including transparent Dark Glass integrations."
 platforms = ["macos"]
 
 [[actions]]
@@ -14,6 +14,16 @@ command = ["bash", "scripts/apply.sh"]
 id = "apply-island"
 title = "Apply Island Glass theme"
 command = ["bash", "scripts/apply-island.sh"]
+
+[[actions]]
+id = "apply-dark-glass"
+title = "Apply Dark Glass theme"
+command = ["bash", "scripts/apply-dark-glass.sh"]
+
+[[actions]]
+id = "setup-dark-glass"
+title = "Set up Dark Glass integrations"
+command = ["bash", "scripts/setup-dark-glass.sh"]
 
 [[actions]]
 id = "restore"
@@ -29,6 +39,11 @@ command = ["bash", "scripts/open-social-window.sh"]
 id = "open-island-window"
 title = "Open Island Glass Terminal window"
 command = ["bash", "scripts/open-island-window.sh"]
+
+[[actions]]
+id = "open-dark-glass-window"
+title = "Open Dark Glass Terminal window"
+command = ["bash", "scripts/open-dark-glass-window.sh"]
 
 [[actions]]
 id = "status"

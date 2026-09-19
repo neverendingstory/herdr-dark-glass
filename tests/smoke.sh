@@ -277,6 +277,10 @@ for value in (
     "`HERDR_DARK_GLASS_WINDOW_TITLE` applies only to the Dark Glass launch",
     "invokes each resolved executable only with `--version`",
     "that subprocess's own behavior remains the responsibility of the CLI provider",
+    "### Daily use with a zsh alias",
+    "alias herdrdg='herdr plugin action invoke open-dark-glass-window --plugin linyu.social-glass'",
+    "`herdrdg` launches only",
+    "`apply-dark-glass` replaces the complete Herdr configuration and can remove custom keybindings",
 ):
     assert value in readme, value
 assert "never reads or writes `tui.json`" in readme

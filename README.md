@@ -51,6 +51,23 @@ herdr plugin action invoke open-dark-glass-window --plugin linyu.social-glass
 
 The first command makes the Terminal profile and OpenCode theme asset available; it does not select a CLI theme, authenticate, launch, install, or upgrade an optional CLI. The next command applies the Herdr preset, `status` reports what is saved, and the final command opens a Terminal window only after confirming that the Dark Glass profile exists.
 
+### Daily use with a zsh alias
+
+After completing the one-time setup and apply workflow above, add this alias to `~/.zshrc`:
+
+```zsh
+alias herdrdg='herdr plugin action invoke open-dark-glass-window --plugin linyu.social-glass'
+```
+
+Reload the shell configuration and launch Dark Glass:
+
+```zsh
+source ~/.zshrc
+herdrdg
+```
+
+`herdrdg` launches only the verified Dark Glass Terminal profile and starts Herdr; it deliberately does not run setup or apply again. `apply-dark-glass` replaces the complete Herdr configuration and can remove custom keybindings, so back up or merge personal settings before intentionally reapplying the preset.
+
 ### All nine actions
 
 ```bash

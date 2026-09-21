@@ -75,6 +75,13 @@ printf '%s\n' "$*" >> "${MOCK_INSTALL_LOG:?}"
 exec /usr/bin/install "$@"
 MOCK_INSTALL
 
+cat > "$TMP/bin/failing-theme-probe" <<'MOCK_THEME_PROBE'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$1" >> "${MOCK_THEME_PROBE_LOG:?}"
+exit 73
+MOCK_THEME_PROBE
+
 for cli in opencode claude codex grok; do
   cat > "$TMP/bin/$cli" <<'MOCK_CLI'
 #!/usr/bin/env bash
@@ -84,7 +91,7 @@ exit 97
 MOCK_CLI
   chmod +x "$TMP/bin/$cli"
 done
-chmod +x "$TMP/bin/osascript" "$TMP/bin/open" "$TMP/bin/install"
+chmod +x "$TMP/bin/osascript" "$TMP/bin/open" "$TMP/bin/install" "$TMP/bin/failing-theme-probe"
 
 export MOCK_OSASCRIPT_STDIN="$TMP/osascript.stdin"
 export MOCK_OSASCRIPT_ARGS="$TMP/osascript.args"
@@ -92,6 +99,7 @@ export MOCK_OPEN_LOG="$TMP/open.log"
 export MOCK_OPEN_COUNT="$TMP/open.count"
 export MOCK_OPEN_CALLS="$TMP/open.calls"
 export MOCK_INSTALL_LOG="$TMP/install.log"
+export MOCK_THEME_PROBE_LOG="$TMP/theme-probe.log"
 export MOCK_OPTIONAL_CLI_LOG="$TMP/optional-cli.log"
 export OSASCRIPT_BIN_PATH="$TMP/bin/osascript"
 export OPEN_BIN_PATH="$TMP/bin/open"
@@ -101,6 +109,7 @@ export INSTALL_BIN_PATH="$TMP/bin/install"
 : > "$MOCK_OPEN_COUNT"
 : > "$MOCK_OPEN_CALLS"
 : > "$MOCK_INSTALL_LOG"
+: > "$MOCK_THEME_PROBE_LOG"
 : > "$MOCK_OPTIONAL_CLI_LOG"
 
 # The source-theme check names the missing theme after a bundled profile is found.
@@ -171,6 +180,63 @@ grep -Fq 'Refusing unsafe OpenCode theme directory' "$TMP/themes-parent-file.err
 [[ "$(line_count "$MOCK_INSTALL_LOG")" == "$blocked_install_count" ]] || fail 'non-directory theme parent attempted a theme install'
 [[ ! -e "$HERDR_PLUGIN_STATE_DIR" ]] || fail 'non-directory theme parent created plugin state'
 grep -Fxq 'not a directory' "$blocked_themes" || fail 'non-directory theme parent was modified'
+
+# A deterministic write-capability probe stands in for an unwritable directory,
+# so this remains hermetic even when the tests run as root.
+unwritable_xdg="$TMP/unwritable-themes/xdg-config"
+unwritable_opencode="$unwritable_xdg/opencode"
+unwritable_themes="$unwritable_opencode/themes"
+mkdir -p "$unwritable_themes"
+unwritable_open_count="$(line_count "$MOCK_OPEN_LOG")"
+unwritable_install_count="$(line_count "$MOCK_INSTALL_LOG")"
+: > "$MOCK_THEME_PROBE_LOG"
+if XDG_CONFIG_HOME="$unwritable_xdg" MOCK_TERMINAL_PROFILE_STATE=missing \
+  THEME_DIRECTORY_PROBE_BIN_PATH="$TMP/bin/failing-theme-probe" \
+  bash "$ROOT/scripts/setup-dark-glass.sh" > "$TMP/unwritable-themes.out" 2> "$TMP/unwritable-themes.err"; then
+  fail 'setup unexpectedly accepted an unwritable OpenCode themes directory'
+fi
+grep -Fq 'Unable to prepare the OpenCode theme directory for installation' "$TMP/unwritable-themes.err" || fail 'unwritable theme directory error was unclear'
+[[ ! -s "$TMP/unwritable-themes.out" ]] || fail 'unwritable theme directory printed success output'
+printf '%s\n' "$unwritable_themes" > "$TMP/expected-theme-probe.args"
+cmp -s "$TMP/expected-theme-probe.args" "$MOCK_THEME_PROBE_LOG" || fail 'unwritable theme directory did not run the capability probe'
+[[ "$(line_count "$MOCK_OPEN_LOG")" == "$unwritable_open_count" ]] || fail 'unwritable theme directory opened Terminal profiles'
+[[ "$(line_count "$MOCK_INSTALL_LOG")" == "$unwritable_install_count" ]] || fail 'unwritable theme directory attempted a theme install'
+[[ ! -e "$HERDR_PLUGIN_STATE_DIR" ]] || fail 'unwritable theme directory created plugin state'
+[[ ! -e "$unwritable_themes/herdr-dark-glass.json" ]] || fail 'unwritable theme directory created a theme destination'
+
+# A directory symlink is a valid XDG/dotfiles layout; only its leaf destination
+# remains forbidden from being a symlink.
+linked_xdg="$TMP/linked-themes/xdg-config"
+linked_opencode="$linked_xdg/opencode"
+linked_themes_target="$TMP/linked-themes/target-themes"
+mkdir -p "$linked_opencode" "$linked_themes_target"
+ln -s "$linked_themes_target" "$linked_opencode/themes"
+linked_open_count="$(line_count "$MOCK_OPEN_LOG")"
+if ! XDG_CONFIG_HOME="$linked_xdg" MOCK_TERMINAL_PROFILE_STATE=present \
+  bash "$ROOT/scripts/setup-dark-glass.sh" > "$TMP/linked-themes.out"; then
+  fail 'setup unexpectedly rejected a directory-symlinked OpenCode themes path'
+fi
+cmp "$ROOT/integrations/opencode/herdr-dark-glass.json" "$linked_themes_target/herdr-dark-glass.json"
+[[ "$(line_count "$MOCK_OPEN_LOG")" == "$linked_open_count" ]] || fail 'directory-symlinked themes path opened present Terminal profiles'
+[[ ! -e "$HERDR_PLUGIN_STATE_DIR" ]] || fail 'directory-symlinked themes path created plugin state'
+
+rm -f "$linked_themes_target/herdr-dark-glass.json"
+off_path_leaf="$TMP/linked-themes/off-path-theme.json"
+printf '{"name":"must-not-change"}\n' > "$off_path_leaf"
+ln -s "$off_path_leaf" "$linked_themes_target/herdr-dark-glass.json"
+linked_leaf_osascript_count="$(line_count "$MOCK_OSASCRIPT_ARGS")"
+linked_leaf_open_count="$(line_count "$MOCK_OPEN_LOG")"
+linked_leaf_install_count="$(line_count "$MOCK_INSTALL_LOG")"
+if XDG_CONFIG_HOME="$linked_xdg" MOCK_TERMINAL_PROFILE_STATE=present \
+  bash "$ROOT/scripts/setup-dark-glass.sh" > "$TMP/linked-leaf.out" 2> "$TMP/linked-leaf.err"; then
+  fail 'setup unexpectedly accepted a leaf symlink below a directory-symlinked themes path'
+fi
+grep -Fq 'Refusing unsafe OpenCode theme destination' "$TMP/linked-leaf.err" || fail 'directory-symlinked leaf rejection was unclear'
+grep -Fxq '{"name":"must-not-change"}' "$off_path_leaf" || fail 'directory-symlinked leaf wrote off path'
+[[ "$linked_leaf_osascript_count" == "$(line_count "$MOCK_OSASCRIPT_ARGS")" ]] || fail 'directory-symlinked leaf queried Terminal'
+[[ "$linked_leaf_open_count" == "$(line_count "$MOCK_OPEN_LOG")" ]] || fail 'directory-symlinked leaf opened Terminal profiles'
+[[ "$linked_leaf_install_count" == "$(line_count "$MOCK_INSTALL_LOG")" ]] || fail 'directory-symlinked leaf attempted a theme install'
+[[ ! -e "$HERDR_PLUGIN_STATE_DIR" ]] || fail 'directory-symlinked leaf created plugin state'
 
 : > "$MOCK_OSASCRIPT_ARGS"
 : > "$MOCK_OSASCRIPT_STDIN"

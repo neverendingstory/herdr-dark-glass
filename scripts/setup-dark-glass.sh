@@ -22,12 +22,17 @@ CYCLE_PROFILE_FILES=(
 SOURCE_THEME="$ROOT/integrations/opencode/herdr-dark-glass.json"
 THEME_DIRECTORY="$OPENCODE_HOME/themes"
 DEST_THEME="$THEME_DIRECTORY/herdr-dark-glass.json"
+THEME_DIRECTORY_PROBE="${THEME_DIRECTORY_PROBE_BIN_PATH:-}"
 STAMP="$(date +%Y%m%d-%H%M%S)-$$"
 TMP_THEME=""
+THEME_PROBE_FILE=""
 
 cleanup() {
   if [[ -n "$TMP_THEME" && -f "$TMP_THEME" ]]; then
     rm -f "$TMP_THEME"
+  fi
+  if [[ -n "$THEME_PROBE_FILE" && -f "$THEME_PROBE_FILE" ]]; then
+    rm -f "$THEME_PROBE_FILE"
   fi
 }
 trap cleanup EXIT
@@ -103,8 +108,8 @@ done
 # The profile query above is read-only. Validate and create the theme path before
 # requesting any visible Terminal imports so a bad OpenCode parent has no import
 # or theme-install side effects.
-if [[ -L "$OPENCODE_HOME" || ( -e "$OPENCODE_HOME" && ! -d "$OPENCODE_HOME" ) || \
-  -L "$THEME_DIRECTORY" || ( -e "$THEME_DIRECTORY" && ! -d "$THEME_DIRECTORY" ) ]]; then
+if [[ ( -e "$OPENCODE_HOME" && ! -d "$OPENCODE_HOME" ) || \
+  ( -e "$THEME_DIRECTORY" && ! -d "$THEME_DIRECTORY" ) ]]; then
   printf 'Refusing unsafe OpenCode theme directory: %s\n' "$THEME_DIRECTORY" >&2
   exit 1
 fi
@@ -112,6 +117,23 @@ fi
 if ! mkdir -p "$THEME_DIRECTORY"; then
   printf '%s\n' 'Unable to create the OpenCode theme directory.' >&2
   exit 1
+fi
+
+if [[ -n "$THEME_DIRECTORY_PROBE" ]]; then
+  if ! "$THEME_DIRECTORY_PROBE" "$THEME_DIRECTORY"; then
+    printf '%s\n' 'Unable to prepare the OpenCode theme directory for installation.' >&2
+    exit 1
+  fi
+else
+  if ! THEME_PROBE_FILE="$(mktemp "$THEME_DIRECTORY/.herdr-dark-glass-write-probe.XXXXXX")"; then
+    printf '%s\n' 'Unable to prepare the OpenCode theme directory for installation.' >&2
+    exit 1
+  fi
+  if ! rm -f "$THEME_PROBE_FILE"; then
+    printf '%s\n' 'Unable to prepare the OpenCode theme directory for installation.' >&2
+    exit 1
+  fi
+  THEME_PROBE_FILE=""
 fi
 
 if [[ "${#MISSING_PROFILE_FILES[@]}" -gt 0 ]]; then

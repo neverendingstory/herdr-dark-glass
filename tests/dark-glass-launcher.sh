@@ -144,6 +144,13 @@ printf '%s\n' '-' 'Herdr Dark Glass Test' '/opt/mock/herdr' 'Dark Glass Test Win
 cmp -s "$TMP/expected-launch.args" "$MOCK_ARGS_DIR/2" || fail 'delegated launcher arguments were not exactly four expected values'
 assert_contains "$MOCK_BODY_DIR/2" 'if (count of argv) is 5 then'
 assert_contains "$MOCK_BODY_DIR/2" 'exec env -u HERDR_ENV -u HERDR_WORKSPACE_ID -u HERDR_TAB_ID -u HERDR_PANE_ID'
+assert_contains "$MOCK_BODY_DIR/2" 'set previousDefaultSettings to default settings'
+assert_contains "$MOCK_BODY_DIR/2" 'set default settings to socialSettings'
+[[ "$(grep -Fc 'set default settings to previousDefaultSettings' "$MOCK_BODY_DIR/2")" == 2 ]] || fail 'launcher does not restore Terminal default settings on both success and failure paths'
+assert_contains "$MOCK_BODY_DIR/2" 'repeat with attempt from 1 to 20'
+assert_contains "$MOCK_BODY_DIR/2" 'name of current settings of socialTab'
+assert_not_contains "$MOCK_BODY_DIR/2" 'set startup settings'
+assert_not_contains "$MOCK_BODY_DIR/2" 'defaults write'
 assert_not_contains "$MOCK_ARGS_DIR/2" '#080E14'
 assert_not_contains "$MOCK_ARGS_DIR/2" '#'
 

@@ -234,59 +234,63 @@ for relative in (
 ):
     assert os.access(manifest_path.parent / relative, os.X_OK), f"not executable: {relative}"
 
-assert "assets/plugin-actions.png" not in (manifest_path.parent / "README.md").read_text()
-
-readme = (manifest_path.parent / "README.md").read_text()
+readme_path = manifest_path.parent / "README.md"
+readme = readme_path.read_text()
 guide = (manifest_path.parent / "scripts" / "guide.sh").read_text()
-manual_headings = (
-    "## Manual 1 — macOS Terminal",
-    "## Manual 2 — Herdr",
-    "## Manual 3 — CLI inside Herdr Dark Glass",
-)
-for heading in manual_headings:
-    assert readme.count(heading) == 1, heading
-for heading in ("### OpenCode", "### Claude Code", "### Codex CLI", "### Grok Build"):
+new_screenshot = manifest_path.parent / "assets" / "dark-glass-workspace.png"
+old_screenshot = manifest_path.parent / "assets" / "social-glass-workspace.jpg"
+
+assert readme.startswith("# Herdr Dark Glass\n")
+assert len(readme.splitlines()) <= 120
+assert new_screenshot.is_file()
+assert not old_screenshot.exists()
+assert "assets/dark-glass-workspace.png" in readme
+assert "assets/social-glass-workspace.jpg" not in readme
+assert "assets/plugin-actions.png" not in readme
+
+for heading in (
+    "## 效果呈现 / Preview",
+    "## 安装与使用 / Install & Use",
+    "### 环境 / Requirements",
+    "### 安装并启用 / Install and enable",
+    "### CLI 配色 / CLI themes",
+    "### 日常启动 / Daily launch",
+    "## 原项目与许可 / Credits & License",
+):
     assert readme.count(heading) == 1, heading
 
 for value in (
-    "three screenshot-friendly presets",
-    "Social and Island existing visuals and launch behavior remain unchanged",
     "herdr plugin install neverendingstory/herdr-dark-glass",
-    "setup-dark-glass",
-    "apply-dark-glass",
-    "open-dark-glass-window",
-    "herdr-dark-glass",
-    "54% transparent",
-    "BackgroundBlur = 0.24",
-    "dark-ansi",
-    "tui.theme",
-    "GROK_TERMINAL_THEME=1 GROK_THEME=terminal grok",
-    "grok --minimal",
-    "Terminal Settings",
-    "third-party",
-    "OpenCode 1.18.31",
-    "Claude Code 2.1.274",
-    "Codex CLI 0.154.0",
-    "Grok Build 1.0.34",
-    "${XDG_CONFIG_HOME:-$HOME/.config}/opencode/themes/herdr-dark-glass.json",
-    "~/.config/opencode/themes/herdr-dark-glass.json",
-    "OpenCode, Claude Code, Codex CLI, and Grok Build are optional; none is required",
-    "To remove the profile manually, open **Terminal Settings**",
-    "remove the OpenCode theme file manually",
-    "`HERDR_DARK_GLASS_TERMINAL_PROFILE` may override the profile name used by Dark Glass setup, status, and launch",
-    "`HERDR_DARK_GLASS_WINDOW_TITLE` applies only to the Dark Glass launch",
-    "invokes each resolved executable only with `--version`",
-    "that subprocess's own behavior remains the responsibility of the CLI provider",
-    "### Daily use with a zsh alias",
+    "herdr plugin action invoke setup-dark-glass --plugin linyu.social-glass",
+    "herdr plugin action invoke apply-dark-glass --plugin linyu.social-glass",
+    "herdr plugin action invoke status --plugin linyu.social-glass",
+    "herdr plugin action invoke open-dark-glass-window --plugin linyu.social-glass",
     "alias herdrdg='herdr plugin action invoke open-dark-glass-window --plugin linyu.social-glass'",
-    "`herdrdg` launches only",
-    "`apply-dark-glass` replaces the complete Herdr configuration and can remove custom keybindings",
+    "`/themes` → `herdr-dark-glass`",
+    "`Switch to dark mode`",
+    "`Lock theme mode`",
+    "`/theme` → `dark-ansi`",
+    "selection persists globally",
+    "`/theme transparent`",
+    "完整替换 Herdr 配置",
+    "replaces the complete Herdr configuration",
+    "https://github.com/ythx-101/herdr-social-glass",
+    "[MIT License](LICENSE)",
 ):
     assert value in readme, value
-assert "never reads or writes `tui.json`" in readme
-assert "saved preference" in readme
-assert "verify active theme" in readme
-assert "Social/Island unchanged" in readme
+
+credits_offset = readme.index("## 原项目与许可 / Credits & License")
+assert "Herdr Social Glass" not in readme[:credits_offset]
+assert "linyu —" not in readme
+for removed_heading in (
+    "## Manual 1 — macOS Terminal",
+    "## Manual 2 — Herdr",
+    "## Manual 3 — CLI inside Herdr Dark Glass",
+    "### All nine actions",
+    "### Local tests and project files",
+):
+    assert removed_heading not in readme
+
 assert "HERDR SOCIAL GLASS 1.2" in guide
 assert "183;214;163" in guide
 assert "185;190;185" in guide

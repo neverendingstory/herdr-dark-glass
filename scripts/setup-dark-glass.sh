@@ -104,7 +104,7 @@ else
   printf 'OpenCode theme installed at %s\n' "$DEST_THEME"
 fi
 
-printf '%s\n' 'OpenCode: run /themes, select herdr-dark-glass, and lock dark mode.'
-printf '%s\n' 'Claude Code: run /theme and select dark-ansi.'
+printf '%s\n' 'OpenCode: run /themes and select herdr-dark-glass; then open Ctrl+P. Run Switch to dark mode if shown; when already dark, run Lock theme mode only if that action is shown.'
+printf '%s\n' 'Claude Code: run /theme and select dark-ansi; the selection persists globally.'
 printf '%s\n' 'Codex CLI: run codex normally; tui.theme controls syntax only.'
 printf '%s\n' 'Grok Build: run /theme transparent, or use GROK_TERMINAL_THEME=1 GROK_THEME=terminal grok.'

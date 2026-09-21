@@ -145,6 +145,9 @@ MOCK_TERMINAL_PROFILE_STATE=missing bash "$ROOT/scripts/setup-dark-glass.sh" > "
 cmp "$ROOT/integrations/opencode/herdr-dark-glass.json" \
   "$OPENCODE_HOME/themes/herdr-dark-glass.json"
 grep -Fq "OpenCode theme installed at $OPENCODE_HOME/themes/herdr-dark-glass.json" "$TMP/first-install.out" || fail 'setup did not report OpenCode discovery path'
+grep -Fq 'Switch to dark mode' "$TMP/first-install.out" || fail 'setup did not explain how to select dark mode'
+grep -Fq 'Lock theme mode' "$TMP/first-install.out" || fail 'setup did not explain how to persist dark mode'
+grep -Fq 'dark-ansi' "$TMP/first-install.out" || fail 'setup did not name the persistent Claude Code theme'
 grep -Fq 'name of every settings set' "$MOCK_OSASCRIPT_STDIN" || fail 'setup did not enumerate Terminal profile names'
 [[ "$(stat -f '%Lp' "$OPENCODE_HOME/themes/herdr-dark-glass.json")" == 600 ]] || fail 'installed theme mode is not 600'
 grep -Fq "$ROOT/profiles/Herdr Dark Glass.terminal" "$MOCK_OPEN_LOG" || fail 'missing Terminal profile was not opened'

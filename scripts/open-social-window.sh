@@ -39,9 +39,28 @@ on run argv
       display dialog "Terminal profile ‘" & profileName & "’ was not found." buttons {"OK"} default button 1
       error number -128
     end try
-    set socialTab to do script ""
-    set current settings of socialTab to socialSettings
-    delay 0.6
+    set previousDefaultSettings to default settings
+    try
+      set default settings to socialSettings
+      set socialTab to do script ""
+      set default settings to previousDefaultSettings
+    on error errorMessage number errorNumber
+      set default settings to previousDefaultSettings
+      error errorMessage number errorNumber
+    end try
+    set profileReady to false
+    repeat with attempt from 1 to 20
+      try
+        if (name of current settings of socialTab) is profileName then
+          set profileReady to true
+          exit repeat
+        end if
+      end try
+      delay 0.05
+    end repeat
+    if profileReady is false then
+      error "Terminal did not create the new tab with profile ‘" & profileName & "’."
+    end if
     set launchCommand to colorCommand & "printf '\\033]0;%s\\007' " & quoted form of windowTitle & "; exec env -u HERDR_ENV -u HERDR_WORKSPACE_ID -u HERDR_TAB_ID -u HERDR_PANE_ID " & quoted form of herdrBin
     do script launchCommand in socialTab
     delay 0.6

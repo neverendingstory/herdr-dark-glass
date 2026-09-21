@@ -263,6 +263,26 @@ cmp -s "$TMP/expected-import.args" "$MOCK_OPEN_LOG" || fail 'missing cycle profi
 [[ ! -e "$OPENCODE_HOME/tui.json" && ! -e "$OPENCODE_HOME/tui.jsonc" ]] || fail 'setup wrote OpenCode TUI configuration'
 [[ ! -s "$MOCK_OPTIONAL_CLI_LOG" ]] || fail 'setup invoked an optional CLI'
 
+# A current theme needs no write preflight, even when missing profiles still need
+# a visible import request.
+: > "$MOCK_OPEN_LOG"
+: > "$MOCK_OPEN_COUNT"
+: > "$MOCK_OPEN_CALLS"
+: > "$MOCK_THEME_PROBE_LOG"
+current_theme_backup_count="$(backup_count)"
+current_theme_install_count="$(line_count "$MOCK_INSTALL_LOG")"
+if ! MOCK_TERMINAL_PROFILE_STATE=missing THEME_DIRECTORY_PROBE_BIN_PATH="$TMP/bin/failing-theme-probe" \
+  bash "$ROOT/scripts/setup-dark-glass.sh" > "$TMP/current-theme-missing-profiles.out"; then
+  fail 'current theme unexpectedly required a write-capability probe'
+fi
+[[ ! -s "$MOCK_THEME_PROBE_LOG" ]] || fail 'current theme invoked a write-capability probe'
+[[ "$(line_count "$MOCK_OPEN_CALLS")" == 1 && "$(<"$MOCK_OPEN_COUNT")" == 4 ]] || fail 'current theme did not make one missing-profile import request'
+cmp -s "$TMP/expected-import.args" "$MOCK_OPEN_LOG" || fail 'current theme did not import all missing profiles in order'
+[[ "$current_theme_backup_count" == "$(backup_count)" ]] || fail 'current theme created a backup'
+[[ ! -e "$HERDR_PLUGIN_STATE_DIR" ]] || fail 'current theme created plugin state'
+[[ "$current_theme_install_count" == "$(line_count "$MOCK_INSTALL_LOG")" ]] || fail 'current theme attempted a theme install'
+cmp "$ROOT/integrations/opencode/herdr-dark-glass.json" "$OPENCODE_HOME/themes/herdr-dark-glass.json"
+
 # A mixed Terminal state imports only the missing profiles in stable profile order.
 : > "$MOCK_OPEN_LOG"
 : > "$MOCK_OPEN_COUNT"

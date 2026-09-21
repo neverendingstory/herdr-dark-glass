@@ -61,6 +61,11 @@ if [[ -L "$DEST_THEME" ]] || [[ -e "$DEST_THEME" && ! -f "$DEST_THEME" ]]; then
   exit 1
 fi
 
+THEME_IS_CURRENT=0
+if [[ -f "$DEST_THEME" ]] && cmp -s "$SOURCE_THEME" "$DEST_THEME"; then
+  THEME_IS_CURRENT=1
+fi
+
 if ! PROFILE_QUERY="$("$OSASCRIPT" - "${CYCLE_PROFILE_NAMES[@]}" <<'APPLESCRIPT'
 on run argv
   tell application "Terminal"
@@ -105,35 +110,37 @@ for index in "${!CYCLE_PROFILE_NAMES[@]}"; do
   esac
 done
 
-# The profile query above is read-only. Validate and create the theme path before
-# requesting any visible Terminal imports so a bad OpenCode parent has no import
-# or theme-install side effects.
-if [[ ( -e "$OPENCODE_HOME" && ! -d "$OPENCODE_HOME" ) || \
-  ( -e "$THEME_DIRECTORY" && ! -d "$THEME_DIRECTORY" ) ]]; then
-  printf 'Refusing unsafe OpenCode theme directory: %s\n' "$THEME_DIRECTORY" >&2
-  exit 1
-fi
+if [[ "$THEME_IS_CURRENT" != 1 ]]; then
+  # The profile query above is read-only. Validate and create the theme path before
+  # requesting any visible Terminal imports so a bad OpenCode parent has no import
+  # or theme-install side effects.
+  if [[ ( -e "$OPENCODE_HOME" && ! -d "$OPENCODE_HOME" ) || \
+    ( -e "$THEME_DIRECTORY" && ! -d "$THEME_DIRECTORY" ) ]]; then
+    printf 'Refusing unsafe OpenCode theme directory: %s\n' "$THEME_DIRECTORY" >&2
+    exit 1
+  fi
 
-if ! mkdir -p "$THEME_DIRECTORY"; then
-  printf '%s\n' 'Unable to create the OpenCode theme directory.' >&2
-  exit 1
-fi
+  if ! mkdir -p "$THEME_DIRECTORY"; then
+    printf '%s\n' 'Unable to create the OpenCode theme directory.' >&2
+    exit 1
+  fi
 
-if [[ -n "$THEME_DIRECTORY_PROBE" ]]; then
-  if ! "$THEME_DIRECTORY_PROBE" "$THEME_DIRECTORY"; then
-    printf '%s\n' 'Unable to prepare the OpenCode theme directory for installation.' >&2
-    exit 1
+  if [[ -n "$THEME_DIRECTORY_PROBE" ]]; then
+    if ! "$THEME_DIRECTORY_PROBE" "$THEME_DIRECTORY"; then
+      printf '%s\n' 'Unable to prepare the OpenCode theme directory for installation.' >&2
+      exit 1
+    fi
+  else
+    if ! THEME_PROBE_FILE="$(mktemp "$THEME_DIRECTORY/.herdr-dark-glass-write-probe.XXXXXX")"; then
+      printf '%s\n' 'Unable to prepare the OpenCode theme directory for installation.' >&2
+      exit 1
+    fi
+    if ! rm -f "$THEME_PROBE_FILE"; then
+      printf '%s\n' 'Unable to prepare the OpenCode theme directory for installation.' >&2
+      exit 1
+    fi
+    THEME_PROBE_FILE=""
   fi
-else
-  if ! THEME_PROBE_FILE="$(mktemp "$THEME_DIRECTORY/.herdr-dark-glass-write-probe.XXXXXX")"; then
-    printf '%s\n' 'Unable to prepare the OpenCode theme directory for installation.' >&2
-    exit 1
-  fi
-  if ! rm -f "$THEME_PROBE_FILE"; then
-    printf '%s\n' 'Unable to prepare the OpenCode theme directory for installation.' >&2
-    exit 1
-  fi
-  THEME_PROBE_FILE=""
 fi
 
 if [[ "${#MISSING_PROFILE_FILES[@]}" -gt 0 ]]; then
@@ -146,7 +153,7 @@ else
   printf '%s\n' 'Terminal cycle profiles are available: 4/4; Herdr Dark Glass Read is the default launch profile.'
 fi
 
-if [[ -f "$DEST_THEME" ]] && cmp -s "$SOURCE_THEME" "$DEST_THEME"; then
+if [[ "$THEME_IS_CURRENT" == 1 ]]; then
   printf 'OpenCode theme is already current: %s\n' "$DEST_THEME"
 else
   if [[ -f "$DEST_THEME" ]]; then

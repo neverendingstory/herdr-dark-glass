@@ -108,7 +108,7 @@ if missing_output="$(MOCK_TERMINAL_PROFILE_STATE=missing run_launcher 2>&1)"; th
   fail 'launcher unexpectedly accepted a missing Terminal profile'
 fi
 [[ "$(invocation_count)" == 1 ]] || fail 'missing profile did not make exactly one query'
-grep -Fq 'Terminal profile "Herdr Dark Glass" is missing.' <<< "$missing_output" || fail 'missing profile error did not name the profile'
+grep -Fq 'Terminal profile "Herdr Dark Glass Read" is missing.' <<< "$missing_output" || fail 'missing profile error did not name the default Read profile'
 grep -Fq 'setup-dark-glass' <<< "$missing_output" || fail 'missing profile error did not direct setup'
 assert_contains "$MOCK_BODY_DIR/1" 'name of every settings set'
 
@@ -131,7 +131,16 @@ fi
 [[ "$(invocation_count)" == 1 ]] || fail 'unexpected query response launched a window'
 grep -Fq 'Unexpected Terminal profile query response' <<< "$unexpected_output" || fail 'unexpected response was not actionable'
 
-# A present profile delegates unchanged to Social with exactly its four arguments.
+# The default launch selects the readable dedicated profile without changing override behavior.
+reset_mock
+MOCK_TERMINAL_PROFILE_STATE=present run_launcher
+[[ "$(invocation_count)" == 2 ]] || fail 'default Read profile did not query then launch exactly once'
+printf '%s\n' '-' 'Herdr Dark Glass Read' > "$TMP/expected-default-query.args"
+cmp -s "$TMP/expected-default-query.args" "$MOCK_ARGS_DIR/1" || fail 'default profile was not Herdr Dark Glass Read'
+printf '%s\n' '-' 'Herdr Dark Glass Read' '/opt/mock/herdr' 'Herdr Dark Glass' > "$TMP/expected-default-launch.args"
+cmp -s "$TMP/expected-default-launch.args" "$MOCK_ARGS_DIR/2" || fail 'default launch did not preserve expected argv boundaries'
+
+# A present override delegates unchanged to Social with exactly its four arguments.
 reset_mock
 MOCK_TERMINAL_PROFILE_STATE=present \
 HERDR_DARK_GLASS_TERMINAL_PROFILE='Herdr Dark Glass Test' \

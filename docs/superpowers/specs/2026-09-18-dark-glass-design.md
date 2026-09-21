@@ -71,10 +71,11 @@ The requested result is a third visual mode resembling a dark desktop glass surf
 
 ### Grok Build
 
-- Grok Build provides a terminal-native theme under the aliases `terminal`, `terminal-default`, `transparent`, and `native`.
-- The theme leaves scrollback, composer, modal, and status-line backgrounds on the Terminal canvas while retaining localized reverse-video selection states.
-- Users can select it with `/theme transparent`, start one session with `GROK_TERMINAL_THEME=1 GROK_THEME=terminal grok` when rollout opt-in is needed, or use `grok --minimal` as a terminal-native fallback.
-- The plugin does not read or write `~/.grok/config.toml` or credentials. The verified manual baseline is Grok Build `1.0.34`.
+- Grok Build 1.0.40 has NO custom `herdr-dark-glass` theme.
+- Its built-in terminal aliases `terminal`, `terminal-default`, `transparent`, and `native` are rollout-gated. A bare `/theme transparent` fails until terminal themes are enabled.
+- The exact one-session launch command is `GROK_TERMINAL_THEME=1 GROK_THEME=terminal grok`.
+- Persistent user-managed configuration is `[features] terminal_theme = true` and `[ui] theme = "terminal"`.
+- The plugin does not read or write Grok configuration or credentials. The verified manual baseline is Grok Build `1.0.40`.
 
 ## Selected Visual Contract
 
@@ -83,16 +84,16 @@ The browser demo's Scheme C is the source of truth for the initial implementatio
 | Property | Value |
 |---|---|
 | Background RGB | `#080E14` |
-| Background opacity | `46%` |
-| Background transparency | `54%` |
-| Browser demo blur | `24px` |
+| Cycle profiles | Glass `46%`, Clear `60%`, Read `74%`, Focus `88%` opacity |
+| Default launch profile | `Herdr Dark Glass Read` (`74%` opacity) |
+| Legacy profile | `Herdr Dark Glass` at `46%` opacity |
 | Initial Terminal blur mapping | `BackgroundBlur = 0.24` |
 | Border alpha | `14%` |
 | Accent | `#B7D6A3` |
 | Primary text | `#F5F3ED` |
 | Muted text | `#B9BEB9` |
 
-The browser blur value is a perceptual reference, not a unit-equivalent mapping to Terminal. `BackgroundBlur = 0.24` is the initial native value and must be checked visually on the target macOS release. A documented high-contrast adjustment may raise background opacity without changing the shipped default.
+The browser blur value is a perceptual reference, not a unit-equivalent mapping to Terminal. `BackgroundBlur = 0.24` is the native value for every shipped profile and must be checked visually on the target macOS release. The Read profile is the documented high-readability default; users can cycle or select another shipped profile without changing Terminal defaults.
 
 The shared semantic palette is fixed as follows:
 
@@ -120,20 +121,26 @@ Dark Glass consists of three coordinated visual layers plus a read-only CLI comp
 
 ### 1. Dedicated macOS Terminal Profile
 
-Ship an importable profile named `Herdr Dark Glass` under:
+Ship a legacy importable profile plus four dedicated cycle profiles under:
 
 ```text
 profiles/Herdr Dark Glass.terminal
+profiles/Herdr Dark Glass Glass.terminal
+profiles/Herdr Dark Glass Clear.terminal
+profiles/Herdr Dark Glass Read.terminal
+profiles/Herdr Dark Glass Focus.terminal
 ```
 
-The profile owns:
+The legacy profile remains `Herdr Dark Glass` at opacity `0.46`. The dedicated profiles use opacity Glass `0.46`, Clear `0.60`, Read `0.74`, and Focus `0.88`; Read is the default launcher profile. All retain `#080E14`, blur `0.24`, the shared palette/font/cursor/selection values, and `ANSIBrightBlackColor = #B9BEB9`.
+
+These profiles own:
 
 - Background RGB and alpha.
 - Background blur.
 - Foreground, bold text, cursor, and selection colors.
 - Font and ordinary Terminal appearance defaults needed for a usable imported profile.
 
-The profile must not replace or rename an existing built-in profile. The plugin never modifies `Clear Light` or `Clear Dark`.
+The profiles must not replace or rename an existing built-in profile. The plugin never modifies `Clear Light` or `Clear Dark`.
 
 ### 2. Transparent Herdr Preset
 
@@ -209,7 +216,7 @@ No additional theme asset is installed for these three CLIs:
 
 - Claude Code users select `dark-ansi` with `/theme` so its colors follow the Terminal ANSI palette.
 - Codex users run `codex` normally; its main viewport retains the terminal default background, and `tui.theme` remains a syntax-only choice.
-- Grok users select `/theme transparent`, use `GROK_TERMINAL_THEME=1 GROK_THEME=terminal grok` for a session when needed, or fall back to `grok --minimal`.
+- Grok 1.0.40 has NO custom Dark Glass theme. Its built-in terminal aliases are rollout-gated, so bare `/theme transparent` fails until enabled. Users use `GROK_TERMINAL_THEME=1 GROK_THEME=terminal grok` for one session, or persist `[features] terminal_theme = true` and `[ui] theme = "terminal"`.
 
 This is intentionally a compatibility-and-documentation contract rather than automatic configuration. Localized state backgrounds remain acceptable, and the Terminal profile remains the sole owner of full-window opacity and blur.
 
@@ -231,12 +238,12 @@ bash scripts/setup-dark-glass.sh
 
 Behavior:
 
-1. Confirm the platform is macOS and required files exist.
-2. Install the OpenCode theme at `~/.config/opencode/themes/herdr-dark-glass.json`.
-3. If the destination differs, back it up under the plugin state directory before replacement.
-4. Query Terminal for a profile named `Herdr Dark Glass`.
-5. If it is absent, open the bundled `.terminal` file so Terminal performs its normal explicit import flow.
-6. Print the remaining user-controlled actions: select `herdr-dark-glass` through OpenCode `/themes`, select Claude Code `dark-ansi` through `/theme`, run Codex normally, and select Grok `/theme transparent` or use the documented session-only environment variables.
+1. Confirm the platform, required files, and safe destination type.
+2. Query all four dedicated Terminal cycle profiles as separate argv values before any OpenCode theme mutation.
+3. In one visible Terminal import request, open every missing bundled cycle profile.
+4. Install the OpenCode theme at `~/.config/opencode/themes/herdr-dark-glass.json` only after Terminal preflight/import succeeds.
+5. If the destination differs, back it up under the plugin state directory before replacement.
+6. Print the remaining user-controlled actions: select `herdr-dark-glass` through OpenCode `/themes`, select Claude Code `dark-ansi` through `/theme`, run Codex normally, and use the exact Grok terminal-theme enablement instructions.
 7. Never write Terminal private preferences; never modify OpenCode TUI configuration, selection state, plugin lists, or unrelated settings; and never modify Claude Code, Codex CLI, or Grok Build configuration.
 
 The action may complete with the Terminal profile import still awaiting user confirmation. `status` provides the authoritative post-import check.
@@ -266,19 +273,29 @@ bash scripts/open-dark-glass-window.sh
 
 Behavior:
 
-1. Verify that `Herdr Dark Glass` exists as a Terminal settings set.
+1. Verify that `Herdr Dark Glass Read` exists as a Terminal settings set by default, while permitting the validated profile-name override.
 2. If it is missing, exit with a direct instruction to run `setup-dark-glass` and complete the Terminal import.
 3. Open a new macOS Terminal window using the dedicated profile.
 4. Set the window title and launch Herdr after removing inherited `HERDR_*` pane context.
 5. Do not send OSC 11, because the profile's archived background color carries the required alpha.
 6. Permit profile name and window title overrides through validated environment variables for testing and advanced use.
 
+### `cycle-dark-glass-opacity`
+
+Command:
+
+```text
+bash scripts/cycle-dark-glass-opacity.sh
+```
+
+The action passes the four fixed dedicated profile names as separate argv values to one AppleScript call. It verifies every profile exists, changes only the selected tab of the front Terminal window, and cycles Glass → Clear → Read → Focus → Glass. The legacy `Herdr Dark Glass` profile moves to Clear; an unrelated profile moves to Read. It neither opens a window nor changes startup/default Terminal settings, and reports the resulting level and opacity percentage.
+
 ### `status`
 
 Extend the current status output with independent checks for:
 
 - Herdr preset state: Social Glass, Island Glass, Dark Glass, or locally modified.
-- Existence of the `Herdr Dark Glass` Terminal profile.
+- Count the four dedicated cycle profiles and report `Herdr Dark Glass Read` as the default launcher profile.
 - Installation and content match of the OpenCode theme file.
 - Detectable OpenCode theme selection when available; otherwise report that selection must be verified in OpenCode rather than claiming success.
 - Optional OpenCode, Claude Code, Codex CLI, and Grok Build command availability and sanitized version text.
@@ -300,13 +317,7 @@ Do not overload its current zero-or-two-color interface with opacity concerns. E
 
 ### Documentation and guide
 
-Update README and the in-Herdr guide around three explicit operating manuals:
-
-1. **macOS Terminal manual** — profile import, verification, opacity versus transparency, bright-wallpaper adjustment, Terminal-grid limits, and manual profile removal.
-2. **Herdr manual** — setup, apply, status, launch, restore, backup/rollback behavior, and the unchanged Social/Island modes.
-3. **CLI-inside-Herdr manual** — separate OpenCode, Claude Code, Codex CLI, and Grok Build subsections with exact launch/theme commands, verification guidance, localized-background limitations, and cleanup ownership.
-
-The CLI manual must explicitly distinguish plugin-managed OpenCode theme installation from user-managed theme selection in all four CLIs. It must not imply that setup changes Claude, Codex, or Grok configuration.
+Keep the bilingual README compact while documenting the four Terminal levels, Read as the default, `prefix+u` cycling, and rerunning setup to visibly import missing profiles. Existing customized users must merge the `[[keys.command]]` snippet and must not rerun `apply-dark-glass`, because it can replace their custom keys. The guide renders this README unchanged.
 
 ## Error Handling and Configuration Safety
 
@@ -332,10 +343,10 @@ The CLI manual must explicitly distinguish plugin-managed OpenCode theme install
 - Assert Scheme C foreground and accent tokens.
 - Parse the OpenCode theme and assert all required theme keys.
 - Assert the three main OpenCode backgrounds are `none`.
-- Assert README exposes three manual sections and exact guidance for OpenCode, Claude Code `dark-ansi`, normal Codex operation, and Grok `transparent`/session-only modes.
+- Assert README exposes the compact bilingual four-level workflow and exact guidance for OpenCode, Claude Code `dark-ansi`, normal Codex operation, and Grok’s rollout-gated terminal aliases, session command, and persistent configuration.
 - Assert runtime scripts do not contain configuration-write paths for Claude Code, Codex CLI, or Grok Build.
-- Parse the `.terminal` plist and decode its archived background color to verify RGB and alpha.
-- Assert `BackgroundBlur` equals the approved initial native value.
+- Parse the legacy profile plus all four dedicated profile assets, including their exact opacities, shared blur/palette/font/cursor/selection values, deterministic regeneration, and bright-wallpaper WCAG floors.
+- Assert the README exposes the compact bilingual four-level workflow, Read default, `prefix+u`, safe custom-key merge instructions, and exact Grok rollout/session/persistent guidance.
 - Run `bash -n` on all shell scripts.
 - Resolve a Python interpreter with `tomllib` by preferring `PYTHON_BIN`, then Python 3.13/3.12/3.11/3; fail with an actionable Python 3.11+ test prerequisite instead of silently using macOS Python 3.9.
 
@@ -360,14 +371,14 @@ Use the existing temporary HOME and mock command pattern to cover:
 
 ### Manual verification
 
-On Herdr `0.9.0`, OpenCode `1.18.31`, Claude Code `2.1.274`, Codex CLI `0.154.0`, and Grok Build `1.0.34`:
+On Herdr `0.9.0`, OpenCode `1.18.31`, Claude Code `2.1.274`, Codex CLI `0.154.0`, and Grok Build `1.0.40`:
 
 1. Run setup and import the dedicated Terminal profile.
 2. Apply Dark Glass.
 3. Select the OpenCode theme and lock dark mode.
 4. In Claude Code, select `dark-ansi` through `/theme`.
 5. Run Codex normally without treating `tui.theme` as a transparency control.
-6. In Grok, select `/theme transparent`; verify the session-only environment command and `grok --minimal` fallback when applicable.
+6. For Grok, enable terminal themes through the exact session command or the documented persistent configuration; do not expect bare `/theme transparent` to work before rollout enablement.
 7. Launch a Dark Glass window.
 8. Inspect ordinary shell panes, Herdr sidebar/panels, all four CLI canvases, diffs, dialogs, selections, and third-party TUI extensions.
 9. Repeat with forest, dark, and bright wallpapers.
@@ -377,10 +388,10 @@ On Herdr `0.9.0`, OpenCode `1.18.31`, Claude Code `2.1.274`, Codex CLI `0.154.0`
 ## Acceptance Criteria
 
 - A dedicated `Herdr Dark Glass` Terminal window visibly reveals the desktop wallpaper through a `#080E14` dark veil.
-- The native profile uses alpha `0.46` and the approved initial blur value.
+- The legacy profile remains `#080E14`, alpha `0.46`, and blur `0.24`; dedicated Glass/Clear/Read/Focus profiles use alphas `0.46`/`0.60`/`0.74`/`0.88` and Read launches by default.
 - Herdr's main panel and sidebar do not paint opaque full-area backgrounds.
 - OpenCode's main, panel, and element backgrounds delegate to the terminal.
-- Claude Code `dark-ansi`, Codex's default canvas, and Grok's terminal/transparent mode preserve the Terminal-owned full-area background while allowing localized state surfaces.
+- Claude Code `dark-ansi`, Codex's default canvas, and Grok's enabled built-in terminal aliases preserve the Terminal-owned full-area background while allowing localized state surfaces.
 - Status reports optional CLI availability and versions without making missing CLIs fatal or inspecting private CLI configuration.
 - README provides distinct Terminal, Herdr, and CLI-inside-Herdr manuals with separate instructions for all four CLIs.
 - Primary and muted text remain readable on the reference forest wallpaper.

@@ -9,7 +9,12 @@ STATE_DIR="${HERDR_PLUGIN_STATE_DIR:-$HOME/.config/herdr/plugin-state/linyu.soci
 OPENCODE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/opencode"
 OPENCODE_STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/opencode"
 OSASCRIPT="${OSASCRIPT_BIN_PATH:-osascript}"
-PROFILE_NAME="${HERDR_DARK_GLASS_TERMINAL_PROFILE:-Herdr Dark Glass}"
+CYCLE_PROFILE_NAMES=(
+  'Herdr Dark Glass Glass'
+  'Herdr Dark Glass Clear'
+  'Herdr Dark Glass Read'
+  'Herdr Dark Glass Focus'
+)
 SOURCE_OPENCODE_THEME="$ROOT/integrations/opencode/herdr-dark-glass.json"
 INSTALLED_OPENCODE_THEME="$OPENCODE_DIR/themes/herdr-dark-glass.json"
 OPENCODE_STATE_FILE="$OPENCODE_STATE_DIR/kv.json"
@@ -28,33 +33,54 @@ same_settings() {
     <(sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d' "$right")
 }
 
-terminal_profile_status() {
+terminal_cycle_profile_count() {
   local response
+  local index
+  local installed=0
+  local -a results
 
-  if response="$("$OSASCRIPT" - "$PROFILE_NAME" 2>/dev/null <<'APPLESCRIPT'
+  if ! response="$("$OSASCRIPT" - "${CYCLE_PROFILE_NAMES[@]}" 2>/dev/null <<'APPLESCRIPT'
 on run argv
-  set profileName to item 1 of argv
   tell application "Terminal"
     set profileNames to name of every settings set
   end tell
-  if profileNames contains profileName then
-    return "present"
-  end if
-  return "missing"
+  set results to {}
+  repeat with profileName in argv
+    if profileNames contains (contents of profileName) then
+      set end of results to "present"
+    else
+      set end of results to "missing"
+    end if
+  end repeat
+  set text item delimiters to linefeed
+  return results as text
 end run
 APPLESCRIPT
 )"; then
-    case "$response" in
-      present|missing)
-        printf '%s' "$response"
+    printf '%s' 'unavailable'
+    return
+  fi
+
+  IFS=$'\n' read -r -d '' -a results < <(printf '%s\0' "$response")
+  if [[ "${#results[@]}" -ne "${#CYCLE_PROFILE_NAMES[@]}" ]]; then
+    printf '%s' 'unavailable'
+    return
+  fi
+
+  for index in "${!results[@]}"; do
+    case "${results[$index]}" in
+      present)
+        installed=$((installed + 1))
+        ;;
+      missing)
         ;;
       *)
         printf '%s' 'unavailable'
+        return
         ;;
     esac
-  else
-    printf '%s' 'unavailable'
-  fi
+  done
+  printf '%s' "$installed"
 }
 
 opencode_selection_status() {
@@ -88,7 +114,7 @@ PY
   printf '%s\n' 'verify in OpenCode with /themes'
 }
 
-printf 'Herdr Social Glass 1.2\n\n'
+printf 'Herdr Social Glass 1.3\n\n'
 printf 'Herdr:  %s\n' "$("$HERDR" --version)"
 printf 'Config: %s\n' "$CONFIG_FILE"
 printf 'Social: %s\n' "$ROOT/theme/social-glass.toml"
@@ -106,17 +132,16 @@ else
   echo 'State:   not applied or locally modified'
 fi
 
-case "$(terminal_profile_status)" in
-  present)
-    printf 'Terminal profile: installed\n'
-    ;;
-  missing)
-    printf 'Terminal profile: missing\n'
+cycle_count="$(terminal_cycle_profile_count)"
+case "$cycle_count" in
+  unavailable)
+    printf 'Terminal cycle profiles: check unavailable\n'
     ;;
   *)
-    printf 'Terminal profile: check unavailable\n'
+    printf 'Terminal cycle profiles: %s/4 installed\n' "$cycle_count"
     ;;
 esac
+printf '%s\n' 'Terminal launch default: Herdr Dark Glass Read'
 
 if [[ ! -f "$INSTALLED_OPENCODE_THEME" ]]; then
   printf 'OpenCode theme: missing\n'

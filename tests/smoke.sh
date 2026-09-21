@@ -89,7 +89,7 @@ for script_path in sorted((manifest_path.parent / "scripts").glob("*.sh")):
     assert not PRIVATE_STATE.search(executable), f"private CLI state access: {script_path}"
 
 assert manifest["id"] == "linyu.social-glass"
-assert manifest["version"] == "1.2.0"
+assert manifest["version"] == "1.3.0"
 assert manifest["min_herdr_version"] == "0.8.2"
 assert manifest["platforms"] == ["macos"]
 
@@ -103,6 +103,7 @@ assert set(actions) == {
     "open-window",
     "open-island-window",
     "open-dark-glass-window",
+    "cycle-dark-glass-opacity",
     "status",
 }
 assert actions["apply"]["command"] == ["bash", "scripts/apply.sh"]
@@ -114,6 +115,7 @@ assert actions["apply-dark-glass"]["command"] == ["bash", "scripts/apply-dark-gl
 assert actions["setup-dark-glass"]["command"] == ["bash", "scripts/setup-dark-glass.sh"]
 assert actions["open-island-window"]["command"] == ["bash", "scripts/open-island-window.sh"]
 assert actions["open-dark-glass-window"]["command"] == ["bash", "scripts/open-dark-glass-window.sh"]
+assert actions["cycle-dark-glass-opacity"]["command"] == ["bash", "scripts/cycle-dark-glass-opacity.sh"]
 
 assert social["theme"]["name"] == "catppuccin-latte"
 assert social["theme"]["custom"]["panel_bg"] == "reset"
@@ -173,6 +175,11 @@ assert dark_ui["tab_bar_right"] == [
     {"type": "datetime", "format": "%m/%d %H:%M"},
 ]
 assert dark_ui["tab_bar_right_separator"] == " · "
+assert dark["keys"]["command"] == [{
+    "key": "prefix+u",
+    "type": "shell",
+    "command": "herdr plugin action invoke cycle-dark-glass-opacity --plugin linyu.social-glass",
+}]
 assert dark_ui["sidebar"]["agents"] == {
     "row_gap": 1,
     "rows": [
@@ -230,6 +237,8 @@ for relative in (
     "scripts/apply-preset.sh",
     "scripts/open-island-window.sh",
     "scripts/open-dark-glass-window.sh",
+    "scripts/cycle-dark-glass-opacity.sh",
+    "tests/dark-glass-opacity.sh",
     "tests/functional.sh",
 ):
     assert os.access(manifest_path.parent / relative, os.X_OK), f"not executable: {relative}"
@@ -271,7 +280,15 @@ for value in (
     "`Lock theme mode`",
     "`/theme` → `dark-ansi`",
     "selection persists globally",
-    "`/theme transparent`",
+    "GROK_TERMINAL_THEME=1 GROK_THEME=terminal grok",
+    "terminal_theme = true",
+    'theme = "terminal"',
+    "rollout-gated",
+    "bare `/theme transparent` fails until enabled",
+    "Herdr Dark Glass Read",
+    "`prefix+u`",
+    "cycle-dark-glass-opacity",
+    "must not rerun `apply-dark-glass`",
     "完整替换 Herdr 配置",
     "replaces the complete Herdr configuration",
     "https://github.com/ythx-101/herdr-social-glass",
@@ -291,7 +308,7 @@ for removed_heading in (
 ):
     assert removed_heading not in readme
 
-assert "HERDR SOCIAL GLASS 1.2" in guide
+assert "HERDR SOCIAL GLASS 1.3" in guide
 assert "183;214;163" in guide
 assert "185;190;185" in guide
 assert "Social Glass + Island Glass + Dark Glass workspace presets." in guide
@@ -300,5 +317,6 @@ PY
 "$TEST_PYTHON" "$ROOT/tests/dark-glass-assets.py"
 bash "$ROOT/tests/dark-glass-setup.sh"
 bash "$ROOT/tests/dark-glass-launcher.sh"
+bash "$ROOT/tests/dark-glass-opacity.sh"
 
 printf 'smoke tests passed\n'

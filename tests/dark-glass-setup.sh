@@ -34,17 +34,23 @@ cat > "$TMP/bin/osascript" <<'MOCK_OSASCRIPT'
 #!/usr/bin/env bash
 set -euo pipefail
 cat > "${MOCK_OSASCRIPT_STDIN:?}"
-printf '%s\n' "$*" >> "${MOCK_OSASCRIPT_ARGS:?}"
+printf '%s\n' "$@" >> "${MOCK_OSASCRIPT_ARGS:?}"
 case "${MOCK_TERMINAL_PROFILE_STATE:-missing}" in
-  present|missing)
-    printf '%s\n' "${MOCK_TERMINAL_PROFILE_STATE}"
+  present)
+    printf '%s\n' present present present present
+    ;;
+  missing)
+    printf '%s\n' missing missing missing missing
+    ;;
+  mixed)
+    printf '%s\n' present missing present missing
     ;;
   query-error)
     printf '%s\n' 'mock Terminal query failed' >&2
     exit 74
     ;;
   unexpected)
-    printf '%s\n' 'unexpected Terminal response'
+    printf '%s\n' unexpected present present present
     ;;
   *)
     printf 'unknown mock Terminal state: %s\n' "${MOCK_TERMINAL_PROFILE_STATE}" >&2
@@ -56,7 +62,8 @@ MOCK_OSASCRIPT
 cat > "$TMP/bin/open" <<'MOCK_OPEN'
 #!/usr/bin/env bash
 set -euo pipefail
-printf '%s\n' "$*" >> "${MOCK_OPEN_LOG:?}"
+printf '%s\n' "$#" >> "${MOCK_OPEN_COUNT:?}"
+printf '%s\n' "$@" >> "${MOCK_OPEN_LOG:?}"
 [[ "${MOCK_OPEN_FAIL:-0}" != 1 ]]
 MOCK_OPEN
 
@@ -81,6 +88,7 @@ chmod +x "$TMP/bin/osascript" "$TMP/bin/open" "$TMP/bin/install"
 export MOCK_OSASCRIPT_STDIN="$TMP/osascript.stdin"
 export MOCK_OSASCRIPT_ARGS="$TMP/osascript.args"
 export MOCK_OPEN_LOG="$TMP/open.log"
+export MOCK_OPEN_COUNT="$TMP/open.count"
 export MOCK_INSTALL_LOG="$TMP/install.log"
 export MOCK_OPTIONAL_CLI_LOG="$TMP/optional-cli.log"
 export OSASCRIPT_BIN_PATH="$TMP/bin/osascript"
@@ -88,13 +96,14 @@ export OPEN_BIN_PATH="$TMP/bin/open"
 export INSTALL_BIN_PATH="$TMP/bin/install"
 : > "$MOCK_OSASCRIPT_ARGS"
 : > "$MOCK_OPEN_LOG"
+: > "$MOCK_OPEN_COUNT"
 : > "$MOCK_INSTALL_LOG"
 : > "$MOCK_OPTIONAL_CLI_LOG"
 
 # The source-theme check names the missing theme after a bundled profile is found.
 MISSING_ROOT="$TMP/missing-root"
 mkdir -p "$MISSING_ROOT/profiles"
-cp "$ROOT/profiles/Herdr Dark Glass.terminal" "$MISSING_ROOT/profiles/Herdr Dark Glass.terminal"
+cp "$ROOT/profiles/"*.terminal "$MISSING_ROOT/profiles/"
 MISSING_THEME="$MISSING_ROOT/integrations/opencode/herdr-dark-glass.json"
 if HERDR_PLUGIN_ROOT="$MISSING_ROOT" MOCK_TERMINAL_PROFILE_STATE=present \
   bash "$ROOT/scripts/setup-dark-glass.sh" > "$TMP/missing-source.out" 2> "$TMP/missing-source.err"; then
@@ -147,11 +156,18 @@ cmp "$ROOT/integrations/opencode/herdr-dark-glass.json" \
 grep -Fq "OpenCode theme installed at $OPENCODE_HOME/themes/herdr-dark-glass.json" "$TMP/first-install.out" || fail 'setup did not report OpenCode discovery path'
 grep -Fq 'Switch to dark mode' "$TMP/first-install.out" || fail 'setup did not explain how to select dark mode'
 grep -Fq 'Lock theme mode' "$TMP/first-install.out" || fail 'setup did not explain how to persist dark mode'
+grep -Fq 'Grok Build 1.0.40 has NO custom herdr-dark-glass theme' "$TMP/first-install.out" || fail 'setup did not correct Grok custom-theme guidance'
+grep -Fq 'rollout-gated; a bare /theme transparent fails until enabled' "$TMP/first-install.out" || fail 'setup did not explain Grok rollout gating'
+grep -Fq 'GROK_TERMINAL_THEME=1 GROK_THEME=terminal grok' "$TMP/first-install.out" || fail 'setup did not give the exact Grok launch command'
+grep -Fq '[features] terminal_theme = true and [ui] theme = "terminal"' "$TMP/first-install.out" || fail 'setup did not give Grok persistent configuration guidance'
 grep -Fq 'dark-ansi' "$TMP/first-install.out" || fail 'setup did not name the persistent Claude Code theme'
 grep -Fq 'name of every settings set' "$MOCK_OSASCRIPT_STDIN" || fail 'setup did not enumerate Terminal profile names'
+printf '%s\n' - 'Herdr Dark Glass Glass' 'Herdr Dark Glass Clear' 'Herdr Dark Glass Read' 'Herdr Dark Glass Focus' > "$TMP/expected-query.args"
+cmp -s "$TMP/expected-query.args" "$MOCK_OSASCRIPT_ARGS" || fail 'setup did not query all cycle profiles as separate argv values'
 [[ "$(stat -f '%Lp' "$OPENCODE_HOME/themes/herdr-dark-glass.json")" == 600 ]] || fail 'installed theme mode is not 600'
-grep -Fq "$ROOT/profiles/Herdr Dark Glass.terminal" "$MOCK_OPEN_LOG" || fail 'missing Terminal profile was not opened'
-[[ "$(line_count "$MOCK_OPEN_LOG")" == 1 ]] || fail 'first install imported Terminal profile more than once'
+printf '%s\n' "$ROOT/profiles/Herdr Dark Glass Glass.terminal" "$ROOT/profiles/Herdr Dark Glass Clear.terminal" "$ROOT/profiles/Herdr Dark Glass Read.terminal" "$ROOT/profiles/Herdr Dark Glass Focus.terminal" > "$TMP/expected-import.args"
+cmp -s "$TMP/expected-import.args" "$MOCK_OPEN_LOG" || fail 'missing cycle profiles were not imported as separate argv values'
+[[ "$(<"$MOCK_OPEN_COUNT")" == '4' ]] || fail 'missing cycle profiles were not imported in one visible open call'
 [[ ! -e "$OPENCODE_HOME/tui.json" && ! -e "$OPENCODE_HOME/tui.jsonc" ]] || fail 'setup wrote OpenCode TUI configuration'
 [[ ! -s "$MOCK_OPTIONAL_CLI_LOG" ]] || fail 'setup invoked an optional CLI'
 
@@ -162,7 +178,7 @@ MOCK_TERMINAL_PROFILE_STATE=present bash "$ROOT/scripts/setup-dark-glass.sh"
 after_count="$(backup_count)"
 [[ "$before_count" == "$after_count" ]] || fail 'identical theme created a backup'
 [[ "$before_install_count" == "$(line_count "$MOCK_INSTALL_LOG")" ]] || fail 'identical theme attempted an install or replacement'
-[[ "$(line_count "$MOCK_OPEN_LOG")" == 1 ]] || fail 'present Terminal profile was re-imported'
+[[ "$(line_count "$MOCK_OPEN_LOG")" == 4 ]] || fail 'present cycle profiles were re-imported'
 [[ ! -s "$MOCK_OPTIONAL_CLI_LOG" ]] || fail 'identical setup invoked an optional CLI'
 
 # Fallible Terminal preflight cannot alter a differing local theme or create a backup.
@@ -174,7 +190,7 @@ open_before_preflight_error="$(line_count "$MOCK_OPEN_LOG")"
 if MOCK_TERMINAL_PROFILE_STATE=query-error bash "$ROOT/scripts/setup-dark-glass.sh" > "$TMP/query-error.out" 2> "$TMP/query-error.err"; then
   fail 'setup unexpectedly accepted a Terminal query error'
 fi
-grep -Fq 'Unable to query Terminal profile' "$TMP/query-error.err" || fail 'query error was not actionable'
+grep -Fq 'Unable to query Terminal cycle profiles' "$TMP/query-error.err" || fail 'query error was not actionable'
 [[ ! -s "$TMP/query-error.out" ]] || fail 'query error printed success output'
 cmp "$TMP/must-survive-terminal-preflight.json" "$OPENCODE_HOME/themes/herdr-dark-glass.json"
 [[ "$preflight_backup_count" == "$(backup_count)" ]] || fail 'query error created a theme backup'
@@ -184,7 +200,7 @@ cmp "$TMP/must-survive-terminal-preflight.json" "$OPENCODE_HOME/themes/herdr-dar
 if MOCK_TERMINAL_PROFILE_STATE=unexpected bash "$ROOT/scripts/setup-dark-glass.sh" > "$TMP/unexpected-query.out" 2> "$TMP/unexpected-query.err"; then
   fail 'setup unexpectedly accepted an unexpected Terminal query response'
 fi
-grep -Fq 'Unexpected Terminal profile query response' "$TMP/unexpected-query.err" || fail 'unexpected response was not actionable'
+grep -Fq 'Unexpected Terminal cycle profile query response' "$TMP/unexpected-query.err" || fail 'unexpected response was not actionable'
 [[ ! -s "$TMP/unexpected-query.out" ]] || fail 'unexpected response printed success output'
 cmp "$TMP/must-survive-terminal-preflight.json" "$OPENCODE_HOME/themes/herdr-dark-glass.json"
 [[ "$preflight_backup_count" == "$(backup_count)" ]] || fail 'unexpected response created a theme backup'
@@ -194,12 +210,12 @@ cmp "$TMP/must-survive-terminal-preflight.json" "$OPENCODE_HOME/themes/herdr-dar
 if MOCK_TERMINAL_PROFILE_STATE=missing MOCK_OPEN_FAIL=1 bash "$ROOT/scripts/setup-dark-glass.sh" > "$TMP/open-failure.out" 2> "$TMP/open-failure.err"; then
   fail 'setup unexpectedly accepted a Terminal profile import failure'
 fi
-grep -Fq 'Unable to open the Terminal profile for import' "$TMP/open-failure.err" || fail 'profile import failure was not actionable'
+grep -Fq 'Unable to open the missing Terminal profiles for import' "$TMP/open-failure.err" || fail 'profile import failure was not actionable'
 [[ ! -s "$TMP/open-failure.out" ]] || fail 'profile import failure printed success output'
 cmp "$TMP/must-survive-terminal-preflight.json" "$OPENCODE_HOME/themes/herdr-dark-glass.json"
 [[ "$preflight_backup_count" == "$(backup_count)" ]] || fail 'profile import failure created a theme backup'
 [[ "$preflight_install_count" == "$(line_count "$MOCK_INSTALL_LOG")" ]] || fail 'profile import failure attempted a theme install'
-[[ "$((open_before_preflight_error + 1))" == "$(line_count "$MOCK_OPEN_LOG")" ]] || fail 'profile import failure did not attempt exactly one visible import'
+[[ "$((open_before_preflight_error + 4))" == "$(line_count "$MOCK_OPEN_LOG")" ]] || fail 'profile import failure did not make one explicit cycle import attempt'
 
 # A locally changed destination is preserved as a private backup before replacement.
 printf '{"name":"local-theme"}\n' > "$OPENCODE_HOME/themes/herdr-dark-glass.json"

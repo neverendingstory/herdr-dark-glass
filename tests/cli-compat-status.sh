@@ -45,16 +45,16 @@ printf 'sentinel\n' > "$HOME/credentials"
 make_mock opencode "printf '%s\\n' '1.18.31'"
 make_mock claude "printf '%s\\n' '2.1.274 (Claude Code)'"
 make_mock codex "printf '%s\\n' 'codex-cli 0.154.0'"
-make_mock grok "printf '%s\\n' 'grok 1.0.34 (3736acbc8658)' >&2"
+make_mock grok "printf '%s\\n' 'grok 1.0.40 (3736acbc8658)' >&2"
 present_output="$("$BASH_BIN" "$ROOT/scripts/cli-compat-status.sh")"
 assert_contains "$present_output" 'OpenCode: installed (1.18.31)'
 assert_contains "$present_output" 'Claude Code: installed (2.1.274 (Claude Code))'
 assert_contains "$present_output" 'Codex CLI: installed (codex-cli 0.154.0)'
-assert_contains "$present_output" 'Grok Build: installed (grok 1.0.34 (3736acbc8658))'
+assert_contains "$present_output" 'Grok Build: installed (grok 1.0.40 (3736acbc8658))'
 assert_contains "$present_output" '  Compatibility: select herdr-dark-glass with /themes'
 assert_contains "$present_output" '  Compatibility: select dark-ansi with /theme'
 assert_contains "$present_output" '  Compatibility: terminal canvas compatible; no background setting required'
-assert_contains "$present_output" '  Compatibility: select terminal / transparent with /theme'
+assert_contains "$present_output" '  Compatibility: Grok 1.0.40 has NO custom herdr-dark-glass theme; terminal, terminal-default, transparent, and native are rollout-gated; bare /theme transparent fails until enabled. Launch: GROK_TERMINAL_THEME=1 GROK_THEME=terminal grok. Persistent config: [features] terminal_theme = true; [ui] theme = "terminal".'
 expected_calls=$'opencode --version\nclaude --version\ncodex --version\ngrok --version'
 [[ "$(<"$MOCK_CALLS")" == "$expected_calls" ]] || fail 'optional CLIs received arguments other than --version'
 

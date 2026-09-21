@@ -2,7 +2,7 @@
 set -euo pipefail
 ROOT="${HERDR_PLUGIN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 printf '\033[2J\033[H'
-printf '\033[1;38;2;183;214;163mHERDR SOCIAL GLASS 1.2\033[0m\n'
+printf '\033[1;38;2;183;214;163mHERDR SOCIAL GLASS 1.3\033[0m\n'
 printf '\033[38;2;185;190;185mSocial Glass + Island Glass + Dark Glass workspace presets.\033[0m\n\n'
 awk '!/^[[:space:]]*!\[[^]]*\]\(/' "$ROOT/README.md"
 printf '\n\033[2mPress any key to close.\033[0m'

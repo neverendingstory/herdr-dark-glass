@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT="${HERDR_PLUGIN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 OSASCRIPT="${OSASCRIPT_BIN_PATH:-osascript}"
-PROFILE_NAME="${HERDR_DARK_GLASS_TERMINAL_PROFILE-Herdr Dark Glass}"
+PROFILE_NAME="${HERDR_DARK_GLASS_TERMINAL_PROFILE-Herdr Dark Glass Read}"
 WINDOW_TITLE="${HERDR_DARK_GLASS_WINDOW_TITLE-Herdr Dark Glass}"
 
 validate_single_line() {

@@ -5,8 +5,8 @@ A dark, transparent workspace for macOS Terminal, Herdr, and terminal-native AI 
 
 ## 效果呈现 / Preview
 
-Terminal 提供 `#080E14` 深色底、54% 透明度与原生模糊；Herdr、OpenCode、Claude Code、Codex CLI 和 Grok Build 使用相互匹配的高对比度配色。
-Terminal supplies the `#080E14` canvas, 54% transparency, and native blur while Herdr and supported CLIs provide matching high-contrast colors.
+Terminal owns `#080E14` opacity and native blur (`0.24`): Glass `46%`, Clear `60%`, Read `74%`, Focus `88%`. Read 是默认启动级别。
+Terminal owns the canvas: Glass `46%`, Clear `60%`, Read `74%`, and Focus `88%` opacity; Read is the default launch level.
 
 ![Herdr Dark Glass workspace](assets/dark-glass-workspace.png)
 
@@ -14,61 +14,59 @@ Terminal supplies the `#080E14` canvas, 54% transparency, and native blur while 
 
 ### 环境 / Requirements
 
-- macOS、Terminal，以及 Herdr 0.8.2 或更高版本。
-- macOS, Terminal, and Herdr 0.8.2 or newer.
-- OpenCode、Claude Code、Codex CLI 和 Grok Build 均为可选项。
-- OpenCode, Claude Code, Codex CLI, and Grok Build are optional.
+- macOS、Terminal，以及 Herdr 0.8.2 或更高版本。/ macOS, Terminal, and Herdr 0.8.2 or newer.
+- OpenCode、Claude Code、Codex CLI 和 Grok Build 均为可选项。/ OpenCode, Claude Code, Codex CLI, and Grok Build are optional.
 
 ### 安装并启用 / Install and enable
 
-安装插件 / Install the plugin:
-
 ```bash
 herdr plugin install neverendingstory/herdr-dark-glass
-```
-
-首次使用按顺序执行 / Run these once, in order:
-
-```bash
 herdr plugin action invoke setup-dark-glass --plugin linyu.social-glass
 herdr plugin action invoke apply-dark-glass --plugin linyu.social-glass
 herdr plugin action invoke status --plugin linyu.social-glass
 herdr plugin action invoke open-dark-glass-window --plugin linyu.social-glass
 ```
 
-`setup-dark-glass` 会安装 OpenCode 主题资源；若缺少专用 Terminal profile，它会打开系统导入窗口，请明确确认导入后再运行 `status`。`open-dark-glass-window` 只在 profile 可用时启动窗口。
-
-`setup-dark-glass` installs the OpenCode theme asset. If the dedicated Terminal profile is missing, it opens the visible system import dialog; confirm that import before running `status`. `open-dark-glass-window` launches only after the profile is available.
+`setup-dark-glass` installs the OpenCode asset and visibly imports any missing Glass, Clear, Read, and Focus profiles. Complete Terminal’s import dialog, then rerun setup/status to verify them. `open-dark-glass-window` launches only after its selected profile exists.
 
 ### CLI 配色 / CLI themes
 
-在 Dark Glass 窗口中的对应 CLI 内完成一次选择；选择会持久保存。Make each selection once inside a Dark Glass window; selection persists globally.
+在 Dark Glass 窗口中完成选择；插件只安装 OpenCode 主题，不会配置其他 CLI。 Make selections in a Dark Glass window; the plugin installs only the OpenCode theme.
 
 | CLI | 设置 / Setting |
 | --- | --- |
 | OpenCode | `/themes` → `herdr-dark-glass`；再用 `Ctrl+P`：若显示 `Switch to dark mode` 则执行；已为深色时仅在显示 `Lock theme mode` 时执行后者 |
-| Claude Code | `/theme` → `dark-ansi` |
+| Claude Code | `/theme` → `dark-ansi`；选择会全局持久化 / selection persists globally |
 | Codex CLI | 正常启动；背景由 Terminal 管理 / run normally; Terminal owns the canvas |
-| Grok Build | `/theme transparent` |
+| Grok Build 1.0.40 | 没有 custom `herdr-dark-glass` theme。`terminal`、`terminal-default`、`transparent`、`native` aliases are rollout-gated; bare `/theme transparent` fails until enabled. Start with `GROK_TERMINAL_THEME=1 GROK_THEME=terminal grok`. Persistent config: `[features] terminal_theme = true`; `[ui] theme = "terminal"`. |
 
 ### 日常启动 / Daily launch
-
-将别名加入 `~/.zshrc` / Add this alias to `~/.zshrc`:
 
 ```zsh
 alias herdrdg='herdr plugin action invoke open-dark-glass-window --plugin linyu.social-glass'
 ```
 
-然后运行 / Then run:
-
 ```bash
 source ~/.zshrc
 herdrdg
+# Cycle Glass → Clear → Read → Focus on the selected front tab:
+herdr plugin action invoke cycle-dark-glass-opacity --plugin linyu.social-glass
 ```
 
-`herdrdg` 以专用 profile 新建窗口并启动 Herdr，不会重复应用主题。`herdrdg` creates a window with the dedicated profile and starts Herdr; it does not reapply the theme. `apply-dark-glass` 会完整替换 Herdr 配置并可能移除自定义快捷键；`apply-dark-glass` replaces the complete Herdr configuration and can remove custom keybindings. 请先备份或合并个人配置，不要把 apply 命令放进日常别名。
+`herdrdg` starts with `Herdr Dark Glass Read`. In Dark Glass, `prefix+u` invokes `cycle-dark-glass-opacity`; `prefix+j` and `prefix+k` remain pane navigation. The cycle changes only the selected tab’s Terminal profile.
 
-需要回到首次应用前的配置时 / To restore the first pre-theme configuration:
+已有自定义 Herdr 配置的用户：合并以下 snippet，**不要重新运行 `apply-dark-glass`**，因为它会完整替换 Herdr 配置并可能移除自定义快捷键。 Existing customized users must merge this snippet and **must not rerun `apply-dark-glass`**: it replaces the complete Herdr configuration and can erase custom keys.
+
+```toml
+[[keys.command]]
+key = "prefix+u"
+type = "shell"
+command = "herdr plugin action invoke cycle-dark-glass-opacity --plugin linyu.social-glass"
+```
+
+升级后运行 `setup-dark-glass` 并完成缺失 profile 的可见导入；不要把 apply 命令放进日常别名。 After updates, rerun `setup-dark-glass` and complete visible imports for missing profiles; never put apply in the daily alias.
+
+需要回到首次应用前的 Herdr 配置时 / To restore the first pre-theme Herdr configuration:
 
 ```bash
 herdr plugin action invoke restore --plugin linyu.social-glass

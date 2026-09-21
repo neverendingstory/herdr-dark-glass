@@ -28,6 +28,11 @@ red = "#E78284"
 [terminal]
 new_cwd = "follow"
 
+[[keys.command]]
+key = "prefix+u"
+type = "shell"
+command = "herdr plugin action invoke cycle-dark-glass-opacity --plugin linyu.social-glass"
+
 [ui]
 # Generic public default; optional local personalization is injected as data.
 window_title = "Herdr Dark Glass"

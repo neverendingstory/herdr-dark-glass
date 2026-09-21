@@ -64,14 +64,17 @@ while IFS= read -r _; do
   :
 done
 case "${MOCK_TERMINAL_PROFILE_STATE:-present}" in
-  present|missing)
-    printf '%s\n' "${MOCK_TERMINAL_PROFILE_STATE:-present}"
+  present)
+    printf '%s\n' present present present present
+    ;;
+  missing)
+    printf '%s\n' missing missing missing missing
     ;;
   query-error)
     exit 1
     ;;
   *)
-    printf '%s\n' 'unexpected'
+    printf '%s\n' unexpected present present present
     ;;
 esac
 MOCK_OSASCRIPT_STATUS
@@ -96,7 +99,7 @@ export MOCK_CLI_LOG="$TEST_ROOT/cli-calls.log"
 make_cli_mock opencode '1.18.31' ''
 make_cli_mock claude '2.1.274 (Claude Code)' ''
 make_cli_mock codex 'codex-cli 0.154.0' ''
-make_cli_mock grok 'grok 1.0.34 (3736acbc8658)' '>&2'
+make_cli_mock grok 'grok 1.0.40 (3736acbc8658)' '>&2'
 export PATH="$TEST_ROOT/bin:$PATH"
 
 export MOCK_HERDR_LOG="$TEST_ROOT/herdr-calls.log"
@@ -130,14 +133,15 @@ assert_contains "$MOCK_HERDR_LOG" 'config check'
 SOCIAL_STATUS="$TEST_ROOT/social-status.txt"
 bash "$ROOT/scripts/status.sh" > "$SOCIAL_STATUS"
 assert_contains "$SOCIAL_STATUS" 'State:   social-glass'
-assert_contains "$SOCIAL_STATUS" 'Terminal profile: installed'
+assert_contains "$SOCIAL_STATUS" 'Terminal cycle profiles: 4/4 installed'
+assert_contains "$SOCIAL_STATUS" 'Terminal launch default: Herdr Dark Glass Read'
 assert_contains "$SOCIAL_STATUS" 'OpenCode theme: missing'
 assert_contains "$SOCIAL_STATUS" 'OpenCode saved preference: verify in OpenCode with /themes'
 assert_contains "$SOCIAL_STATUS" 'OpenCode active theme: verify in OpenCode with /themes'
 assert_contains "$SOCIAL_STATUS" 'OpenCode: installed (1.18.31)'
 assert_contains "$SOCIAL_STATUS" 'Claude Code: installed (2.1.274 (Claude Code))'
 assert_contains "$SOCIAL_STATUS" 'Codex CLI: installed (codex-cli 0.154.0)'
-assert_contains "$SOCIAL_STATUS" 'Grok Build: installed (grok 1.0.34 (3736acbc8658))'
+assert_contains "$SOCIAL_STATUS" 'Grok Build: installed (grok 1.0.40 (3736acbc8658))'
 
 # The parent status command remains successful when optional CLI probes are missing or fail.
 mv "$TEST_ROOT/bin/opencode" "$TEST_ROOT/opencode-cli.mock"
@@ -186,19 +190,19 @@ PY
 # Status checks are observational: Terminal is queried read-only and OpenCode uses XDG paths.
 MISSING_TERMINAL_STATUS="$TEST_ROOT/missing-terminal-status.txt"
 MOCK_TERMINAL_PROFILE_STATE=missing bash "$ROOT/scripts/status.sh" > "$MISSING_TERMINAL_STATUS"
-assert_contains "$MISSING_TERMINAL_STATUS" 'Terminal profile: missing'
+assert_contains "$MISSING_TERMINAL_STATUS" 'Terminal cycle profiles: 0/4 installed'
 QUERY_ERROR_TERMINAL_STATUS="$TEST_ROOT/query-error-terminal-status.txt"
 MOCK_TERMINAL_PROFILE_STATE=query-error bash "$ROOT/scripts/status.sh" > "$QUERY_ERROR_TERMINAL_STATUS"
-assert_contains "$QUERY_ERROR_TERMINAL_STATUS" 'Terminal profile: check unavailable'
-assert_not_contains "$QUERY_ERROR_TERMINAL_STATUS" 'Terminal profile: missing'
+assert_contains "$QUERY_ERROR_TERMINAL_STATUS" 'Terminal cycle profiles: check unavailable'
+assert_not_contains "$QUERY_ERROR_TERMINAL_STATUS" 'Terminal cycle profiles: 0/4 installed'
 MISSING_OSASCRIPT_STATUS="$TEST_ROOT/missing-osascript-status.txt"
 OSASCRIPT_BIN_PATH="$TEST_ROOT/no-such-osascript" bash "$ROOT/scripts/status.sh" > "$MISSING_OSASCRIPT_STATUS"
-assert_contains "$MISSING_OSASCRIPT_STATUS" 'Terminal profile: check unavailable'
-assert_not_contains "$MISSING_OSASCRIPT_STATUS" 'Terminal profile: missing'
+assert_contains "$MISSING_OSASCRIPT_STATUS" 'Terminal cycle profiles: check unavailable'
+assert_not_contains "$MISSING_OSASCRIPT_STATUS" 'Terminal cycle profiles: 0/4 installed'
 MALFORMED_TERMINAL_STATUS="$TEST_ROOT/malformed-terminal-status.txt"
 MOCK_TERMINAL_PROFILE_STATE=unexpected bash "$ROOT/scripts/status.sh" > "$MALFORMED_TERMINAL_STATUS"
-assert_contains "$MALFORMED_TERMINAL_STATUS" 'Terminal profile: check unavailable'
-assert_not_contains "$MALFORMED_TERMINAL_STATUS" 'Terminal profile: missing'
+assert_contains "$MALFORMED_TERMINAL_STATUS" 'Terminal cycle profiles: check unavailable'
+assert_not_contains "$MALFORMED_TERMINAL_STATUS" 'Terminal cycle profiles: 0/4 installed'
 
 OPENCODE_THEME="$XDG_CONFIG_HOME/opencode/themes/herdr-dark-glass.json"
 OPENCODE_STATE="$XDG_STATE_HOME/opencode/kv.json"

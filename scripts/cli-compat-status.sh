@@ -103,6 +103,6 @@ probe_cli() {
 probe_cli 'OpenCode' opencode 'select herdr-dark-glass with /themes'
 probe_cli 'Claude Code' claude 'select dark-ansi with /theme'
 probe_cli 'Codex CLI' codex 'terminal canvas compatible; no background setting required'
-probe_cli 'Grok Build' grok 'select terminal / transparent with /theme'
+probe_cli 'Grok Build' grok 'Grok 1.0.40 has NO custom herdr-dark-glass theme; terminal, terminal-default, transparent, and native are rollout-gated; bare /theme transparent fails until enabled. Launch: GROK_TERMINAL_THEME=1 GROK_THEME=terminal grok. Persistent config: [features] terminal_theme = true; [ui] theme = "terminal".'
 
 exit 0

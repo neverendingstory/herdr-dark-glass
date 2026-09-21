@@ -20,7 +20,8 @@ CYCLE_PROFILE_FILES=(
   "$ROOT/profiles/Herdr Dark Glass Focus.terminal"
 )
 SOURCE_THEME="$ROOT/integrations/opencode/herdr-dark-glass.json"
-DEST_THEME="$OPENCODE_HOME/themes/herdr-dark-glass.json"
+THEME_DIRECTORY="$OPENCODE_HOME/themes"
+DEST_THEME="$THEME_DIRECTORY/herdr-dark-glass.json"
 STAMP="$(date +%Y%m%d-%H%M%S)-$$"
 TMP_THEME=""
 
@@ -99,6 +100,20 @@ for index in "${!CYCLE_PROFILE_NAMES[@]}"; do
   esac
 done
 
+# The profile query above is read-only. Validate and create the theme path before
+# requesting any visible Terminal imports so a bad OpenCode parent has no import
+# or theme-install side effects.
+if [[ -L "$OPENCODE_HOME" || ( -e "$OPENCODE_HOME" && ! -d "$OPENCODE_HOME" ) || \
+  -L "$THEME_DIRECTORY" || ( -e "$THEME_DIRECTORY" && ! -d "$THEME_DIRECTORY" ) ]]; then
+  printf 'Refusing unsafe OpenCode theme directory: %s\n' "$THEME_DIRECTORY" >&2
+  exit 1
+fi
+
+if ! mkdir -p "$THEME_DIRECTORY"; then
+  printf '%s\n' 'Unable to create the OpenCode theme directory.' >&2
+  exit 1
+fi
+
 if [[ "${#MISSING_PROFILE_FILES[@]}" -gt 0 ]]; then
   if ! "$OPEN" "${MISSING_PROFILE_FILES[@]}"; then
     printf '%s\n' 'Unable to open the missing Terminal profiles for import. Complete the visible Terminal imports, then run status.' >&2
@@ -107,11 +122,6 @@ if [[ "${#MISSING_PROFILE_FILES[@]}" -gt 0 ]]; then
   printf 'Opened %s missing Terminal cycle profile(s) for explicit import. Complete the imports, then run status.\n' "${#MISSING_PROFILE_FILES[@]}"
 else
   printf '%s\n' 'Terminal cycle profiles are available: 4/4; Herdr Dark Glass Read is the default launch profile.'
-fi
-
-if ! mkdir -p "$OPENCODE_HOME/themes"; then
-  printf '%s\n' 'Unable to create the OpenCode theme directory.' >&2
-  exit 1
 fi
 
 if [[ -f "$DEST_THEME" ]] && cmp -s "$SOURCE_THEME" "$DEST_THEME"; then

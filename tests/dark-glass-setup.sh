@@ -63,6 +63,7 @@ cat > "$TMP/bin/open" <<'MOCK_OPEN'
 #!/usr/bin/env bash
 set -euo pipefail
 printf '%s\n' "$#" >> "${MOCK_OPEN_COUNT:?}"
+printf '%s\n' "$#" >> "${MOCK_OPEN_CALLS:?}"
 printf '%s\n' "$@" >> "${MOCK_OPEN_LOG:?}"
 [[ "${MOCK_OPEN_FAIL:-0}" != 1 ]]
 MOCK_OPEN
@@ -89,6 +90,7 @@ export MOCK_OSASCRIPT_STDIN="$TMP/osascript.stdin"
 export MOCK_OSASCRIPT_ARGS="$TMP/osascript.args"
 export MOCK_OPEN_LOG="$TMP/open.log"
 export MOCK_OPEN_COUNT="$TMP/open.count"
+export MOCK_OPEN_CALLS="$TMP/open.calls"
 export MOCK_INSTALL_LOG="$TMP/install.log"
 export MOCK_OPTIONAL_CLI_LOG="$TMP/optional-cli.log"
 export OSASCRIPT_BIN_PATH="$TMP/bin/osascript"
@@ -97,6 +99,7 @@ export INSTALL_BIN_PATH="$TMP/bin/install"
 : > "$MOCK_OSASCRIPT_ARGS"
 : > "$MOCK_OPEN_LOG"
 : > "$MOCK_OPEN_COUNT"
+: > "$MOCK_OPEN_CALLS"
 : > "$MOCK_INSTALL_LOG"
 : > "$MOCK_OPTIONAL_CLI_LOG"
 
@@ -149,6 +152,29 @@ for unsafe_kind in directory symlink; do
   fi
 done
 
+# A non-directory theme parent is rejected after the read-only profile query but
+# before any visible Terminal import or OpenCode/state mutation.
+blocked_xdg="$TMP/themes-parent-file/xdg-config"
+blocked_opencode="$blocked_xdg/opencode"
+blocked_themes="$blocked_opencode/themes"
+mkdir -p "$blocked_opencode"
+printf 'not a directory\n' > "$blocked_themes"
+blocked_open_count="$(line_count "$MOCK_OPEN_LOG")"
+blocked_install_count="$(line_count "$MOCK_INSTALL_LOG")"
+if XDG_CONFIG_HOME="$blocked_xdg" MOCK_TERMINAL_PROFILE_STATE=missing \
+  bash "$ROOT/scripts/setup-dark-glass.sh" > "$TMP/themes-parent-file.out" 2> "$TMP/themes-parent-file.err"; then
+  fail 'setup unexpectedly accepted a non-directory OpenCode themes parent'
+fi
+grep -Fq 'Refusing unsafe OpenCode theme directory' "$TMP/themes-parent-file.err" || fail 'non-directory theme parent error was unclear'
+[[ ! -s "$TMP/themes-parent-file.out" ]] || fail 'non-directory theme parent printed success output'
+[[ "$(line_count "$MOCK_OPEN_LOG")" == "$blocked_open_count" ]] || fail 'non-directory theme parent opened Terminal profiles'
+[[ "$(line_count "$MOCK_INSTALL_LOG")" == "$blocked_install_count" ]] || fail 'non-directory theme parent attempted a theme install'
+[[ ! -e "$HERDR_PLUGIN_STATE_DIR" ]] || fail 'non-directory theme parent created plugin state'
+grep -Fxq 'not a directory' "$blocked_themes" || fail 'non-directory theme parent was modified'
+
+: > "$MOCK_OSASCRIPT_ARGS"
+: > "$MOCK_OSASCRIPT_STDIN"
+
 # A new theme installs at OpenCode's XDG discovery path and requests a visible Terminal-profile import.
 MOCK_TERMINAL_PROFILE_STATE=missing bash "$ROOT/scripts/setup-dark-glass.sh" > "$TMP/first-install.out"
 cmp "$ROOT/integrations/opencode/herdr-dark-glass.json" \
@@ -171,14 +197,30 @@ cmp -s "$TMP/expected-import.args" "$MOCK_OPEN_LOG" || fail 'missing cycle profi
 [[ ! -e "$OPENCODE_HOME/tui.json" && ! -e "$OPENCODE_HOME/tui.jsonc" ]] || fail 'setup wrote OpenCode TUI configuration'
 [[ ! -s "$MOCK_OPTIONAL_CLI_LOG" ]] || fail 'setup invoked an optional CLI'
 
+# A mixed Terminal state imports only the missing profiles in stable profile order.
+: > "$MOCK_OPEN_LOG"
+: > "$MOCK_OPEN_COUNT"
+: > "$MOCK_OPEN_CALLS"
+MOCK_TERMINAL_PROFILE_STATE=mixed bash "$ROOT/scripts/setup-dark-glass.sh"
+printf '%s\n' "$ROOT/profiles/Herdr Dark Glass Clear.terminal" "$ROOT/profiles/Herdr Dark Glass Focus.terminal" > "$TMP/expected-mixed-import.args"
+[[ "$(line_count "$MOCK_OPEN_CALLS")" == 1 ]] || fail 'mixed cycle profiles were not imported in exactly one visible open call'
+[[ "$(<"$MOCK_OPEN_COUNT")" == 2 ]] || fail 'mixed cycle profile import did not contain exactly two assets'
+cmp -s "$TMP/expected-mixed-import.args" "$MOCK_OPEN_LOG" || fail 'mixed cycle profile import did not contain only Clear then Focus'
+! grep -Fq "$ROOT/profiles/Herdr Dark Glass Glass.terminal" "$MOCK_OPEN_LOG" || fail 'mixed cycle profile import opened an already-present Glass profile'
+! grep -Fq "$ROOT/profiles/Herdr Dark Glass Read.terminal" "$MOCK_OPEN_LOG" || fail 'mixed cycle profile import opened an already-present Read profile'
+[[ ! -s "$MOCK_OPTIONAL_CLI_LOG" ]] || fail 'mixed setup invoked an optional CLI'
+
 before_count="$(backup_count)"
 before_install_count="$(line_count "$MOCK_INSTALL_LOG")"
+open_args_before_present="$(line_count "$MOCK_OPEN_LOG")"
+open_calls_before_present="$(line_count "$MOCK_OPEN_CALLS")"
 # An already-current theme is a no-op and a present profile is not re-imported.
 MOCK_TERMINAL_PROFILE_STATE=present bash "$ROOT/scripts/setup-dark-glass.sh"
 after_count="$(backup_count)"
 [[ "$before_count" == "$after_count" ]] || fail 'identical theme created a backup'
 [[ "$before_install_count" == "$(line_count "$MOCK_INSTALL_LOG")" ]] || fail 'identical theme attempted an install or replacement'
-[[ "$(line_count "$MOCK_OPEN_LOG")" == 4 ]] || fail 'present cycle profiles were re-imported'
+[[ "$open_args_before_present" == "$(line_count "$MOCK_OPEN_LOG")" ]] || fail 'present cycle profiles were re-imported'
+[[ "$open_calls_before_present" == "$(line_count "$MOCK_OPEN_CALLS")" ]] || fail 'present cycle profiles made a visible open call'
 [[ ! -s "$MOCK_OPTIONAL_CLI_LOG" ]] || fail 'identical setup invoked an optional CLI'
 
 # Fallible Terminal preflight cannot alter a differing local theme or create a backup.

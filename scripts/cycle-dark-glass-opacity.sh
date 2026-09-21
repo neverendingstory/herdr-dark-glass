@@ -20,7 +20,30 @@ if ! command -v "$OSASCRIPT" >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! NEXT_PROFILE="$("$OSASCRIPT" - "${PROFILE_NAMES[@]}" <<'APPLESCRIPT'
+expected_next_profile() {
+  case "$1" in
+    'Herdr Dark Glass Glass')
+      printf '%s\n' 'Herdr Dark Glass Clear'
+      ;;
+    'Herdr Dark Glass Clear')
+      printf '%s\n' 'Herdr Dark Glass Read'
+      ;;
+    'Herdr Dark Glass Read')
+      printf '%s\n' 'Herdr Dark Glass Focus'
+      ;;
+    'Herdr Dark Glass Focus')
+      printf '%s\n' 'Herdr Dark Glass Glass'
+      ;;
+    'Herdr Dark Glass')
+      printf '%s\n' 'Herdr Dark Glass Clear'
+      ;;
+    *)
+      printf '%s\n' 'Herdr Dark Glass Read'
+      ;;
+  esac
+}
+
+if ! CYCLE_RESPONSE="$("$OSASCRIPT" - "${PROFILE_NAMES[@]}" <<'APPLESCRIPT'
 on run argv
   if (count of argv) is not 4 then error "Dark Glass opacity cycling received invalid profile arguments."
   set glassName to item 1 of argv
@@ -55,12 +78,30 @@ on run argv
     if (name of current settings of targetTab) is not nextName then
       error "Terminal did not apply the requested Dark Glass profile."
     end if
-    return nextName
+    return currentName & linefeed & nextName
   end tell
 end run
 APPLESCRIPT
 )"; then
   printf '%s\n' 'Unable to cycle Dark Glass opacity. Verify all four cycle profiles are imported and a Terminal window is frontmost.' >&2
+  exit 1
+fi
+
+if [[ "$CYCLE_RESPONSE" != *$'\n'* ]]; then
+  printf 'Unexpected Dark Glass opacity response: %s\n' "$CYCLE_RESPONSE" >&2
+  exit 1
+fi
+
+CURRENT_PROFILE="${CYCLE_RESPONSE%%$'\n'*}"
+NEXT_PROFILE="${CYCLE_RESPONSE#*$'\n'}"
+if [[ -z "$CURRENT_PROFILE" || -z "$NEXT_PROFILE" || "$NEXT_PROFILE" == *$'\n'* ]]; then
+  printf 'Unexpected Dark Glass opacity response: %s\n' "$CYCLE_RESPONSE" >&2
+  exit 1
+fi
+
+EXPECTED_PROFILE="$(expected_next_profile "$CURRENT_PROFILE")"
+if [[ "$NEXT_PROFILE" != "$EXPECTED_PROFILE" ]]; then
+  printf 'Unexpected Dark Glass opacity transition: %s -> %s (expected %s)\n' "$CURRENT_PROFILE" "$NEXT_PROFILE" "$EXPECTED_PROFILE" >&2
   exit 1
 fi
 

@@ -393,7 +393,7 @@ On Herdr `0.9.0`, OpenCode `1.18.31`, Claude Code `2.1.274`, Codex CLI `0.154.0`
 - OpenCode's main, panel, and element backgrounds delegate to the terminal.
 - Claude Code `dark-ansi`, Codex's default canvas, and Grok's enabled built-in terminal aliases preserve the Terminal-owned full-area background while allowing localized state surfaces.
 - Status reports optional CLI availability and versions without making missing CLIs fatal or inspecting private CLI configuration.
-- README provides distinct Terminal, Herdr, and CLI-inside-Herdr manuals with separate instructions for all four CLIs.
+- README provides a compact bilingual Glass/Clear/Read/Focus workflow, identifies Read as the launch default, documents `prefix+u` cycling and visible setup imports, and separately gives the shipped OpenCode, Claude Code, Codex, and Grok guidance.
 - Primary and muted text remain readable on the reference forest wallpaper.
 - Existing Social Glass and Island Glass commands continue to behave as before.
 - No action modifies `Clear Light`, `Clear Dark`, Terminal private preferences, or unrelated OpenCode configuration.

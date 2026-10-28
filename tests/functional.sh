@@ -99,7 +99,7 @@ export MOCK_CLI_LOG="$TEST_ROOT/cli-calls.log"
 make_cli_mock opencode '1.18.31' ''
 make_cli_mock claude '2.1.274 (Claude Code)' ''
 make_cli_mock codex 'codex-cli 0.154.0' ''
-make_cli_mock grok 'grok 1.0.40 (3736acbc8658)' '>&2'
+make_cli_mock grok 'grok 1.0.70 (f50904eaee6c)' '>&2'
 export PATH="$TEST_ROOT/bin:$PATH"
 
 export MOCK_HERDR_LOG="$TEST_ROOT/herdr-calls.log"
@@ -141,7 +141,14 @@ assert_contains "$SOCIAL_STATUS" 'OpenCode active theme: verify in OpenCode with
 assert_contains "$SOCIAL_STATUS" 'OpenCode: installed (1.18.31)'
 assert_contains "$SOCIAL_STATUS" 'Claude Code: installed (2.1.274 (Claude Code))'
 assert_contains "$SOCIAL_STATUS" 'Codex CLI: installed (codex-cli 0.154.0)'
-assert_contains "$SOCIAL_STATUS" 'Grok Build: installed (grok 1.0.40 (3736acbc8658))'
+assert_contains "$SOCIAL_STATUS" 'Grok Build: installed (grok 1.0.70 (f50904eaee6c))'
+assert_contains "$SOCIAL_STATUS" 'Grok theme: missing'
+
+# The Grok theme is reported as applied once the Grok action has written it.
+bash "$ROOT/scripts/apply-dark-glass-grok.sh" >/dev/null
+GROK_STATUS="$TEST_ROOT/grok-status.txt"
+bash "$ROOT/scripts/status.sh" > "$GROK_STATUS"
+assert_contains "$GROK_STATUS" 'Grok theme: terminal, rollout gate enabled (Dark Glass applied)'
 
 # The parent status command remains successful when optional CLI probes are missing or fail.
 mv "$TEST_ROOT/bin/opencode" "$TEST_ROOT/opencode-cli.mock"

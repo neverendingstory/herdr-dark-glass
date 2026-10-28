@@ -71,11 +71,12 @@ The requested result is a third visual mode resembling a dark desktop glass surf
 
 ### Grok Build
 
-- Grok Build 1.0.40 has NO custom `herdr-dark-glass` theme.
+- Grok Build 1.0.70 has NO importable theme file. Its theme color slots are managed inside the binary, its bundled `.tmTheme` syntax files cannot be replaced, and its plugin component types are `agents`, `commands`, `hooks`, `mcpServers`, and `skills` — none of which can carry a theme. The only theme setting is `ui.theme`, which names a built-in theme.
 - Its built-in terminal aliases `terminal`, `terminal-default`, `transparent`, and `native` are rollout-gated. A bare `/theme transparent` fails until terminal themes are enabled.
 - The exact one-session launch command is `GROK_TERMINAL_THEME=1 GROK_THEME=terminal grok`.
 - Persistent user-managed configuration is `[features] terminal_theme = true` and `[ui] theme = "terminal"`.
-- The plugin does not read or write Grok configuration or credentials. The verified manual baseline is Grok Build `1.0.40`.
+- The verified manual baseline is Grok Build `1.0.70`. The rollout gate is still present in that release.
+- The plugin reads and writes the Grok configuration only from the explicit `apply-dark-glass-grok` action. It never reads or writes Grok credentials, and no other script may touch Grok state at all.
 
 ## Selected Visual Contract
 
@@ -212,13 +213,13 @@ Added and removed diff foregrounds remain `#A6D189` and `#E78284`; borders and l
 
 #### Claude Code, Codex CLI, and Grok Build
 
-No additional theme asset is installed for these three CLIs:
-
 - Claude Code users select `dark-ansi` with `/theme` so its colors follow the Terminal ANSI palette.
 - Codex users run `codex` normally; its main viewport retains the terminal default background, and `tui.theme` remains a syntax-only choice.
-- Grok 1.0.40 has NO custom Dark Glass theme. Its built-in terminal aliases are rollout-gated, so bare `/theme transparent` fails until enabled. Users use `GROK_TERMINAL_THEME=1 GROK_THEME=terminal grok` for one session, or persist `[features] terminal_theme = true` and `[ui] theme = "terminal"`.
+- Grok 1.0.70 has NO importable Dark Glass theme file. Its built-in terminal aliases are rollout-gated, so bare `/theme transparent` fails until enabled. Users use `GROK_TERMINAL_THEME=1 GROK_THEME=terminal grok` for one session, persist `[features] terminal_theme = true` and `[ui] theme = "terminal"`, or run the `apply-dark-glass-grok` action, which writes exactly those two settings.
 
-This is intentionally a compatibility-and-documentation contract rather than automatic configuration. Localized state backgrounds remain acceptable, and the Terminal profile remains the sole owner of full-window opacity and blur.
+The Grok theme is therefore the built-in `terminal` theme rather than a color scheme of its own. That theme paints no colors of its own: it borrows the Terminal profile's ANSI palette and leaves the canvas visible, so under the `Herdr Dark Glass Read` profile it renders the same Dark Glass palette as the OpenCode integration (accent `#B7D6A3`, text `#F5F3ED`, red `#E78284`, green `#A6D189`, blue `#8BD5FF`, magenta `#C4A7E7`) directly on the translucent `#080E14` canvas. Because Grok never asks a multiplexer for its terminal colors, running it under Herdr leaves the message band off entirely, so Grok sits on the glass canvas instead of painting a panel over it.
+
+Claude Code and Codex CLI remain a compatibility-and-documentation contract rather than automatic configuration. Localized state backgrounds remain acceptable, and the Terminal profile remains the sole owner of full-window opacity and blur.
 
 #### Read-only CLI Discovery
 
@@ -247,6 +248,26 @@ Behavior:
 7. Never write Terminal private preferences; never modify OpenCode TUI configuration, selection state, plugin lists, or unrelated settings; and never modify Claude Code, Codex CLI, or Grok Build configuration.
 
 The action may complete with the Terminal profile import still awaiting user confirmation. `status` provides the authoritative post-import check.
+
+### `apply-dark-glass-grok`
+
+Command:
+
+```text
+bash scripts/apply-dark-glass-grok.sh
+```
+
+Behavior:
+
+1. Confirm the platform-independent preconditions: the bundled Grok theme asset exists, the destination is not a symlink, and the destination and its parent are regular files and directories.
+2. Read the wanted settings from `integrations/grok/dark-glass.toml` rather than hard-coding them, so the asset stays the single source of truth.
+3. Merge them into the existing Grok configuration: a key the configuration already carries is rewritten in place, a missing key is appended to its table, and a missing table is appended as a new table. Every other line is copied verbatim.
+4. Verify that the merged result carries every wanted setting before writing anything, and write nothing when it does not.
+5. Back the existing configuration up under the plugin state directory before replacing it.
+6. Leave the file untouched and report the theme as already current when the merge produces no change.
+7. Never read or write Grok credentials, and never touch another CLI's configuration.
+
+This is the only script permitted to reach Grok state, and it is opt-in: `setup-dark-glass` prints the instruction but never writes Grok configuration.
 
 ### `apply-dark-glass`
 
@@ -300,6 +321,7 @@ Extend the current status output with independent checks for:
 - Detectable OpenCode theme selection when available; otherwise report that selection must be verified in OpenCode rather than claiming success.
 - Optional OpenCode, Claude Code, Codex CLI, and Grok Build command availability and sanitized version text.
 - Static compatibility guidance for each installed CLI without reading or claiming its selected theme.
+- The Grok theme name and whether the terminal-theme rollout gate is enabled, so a missing Dark Glass theme is distinguishable from a missing configuration.
 
 A present command whose `--version` exits unsuccessfully is reported as installed with version unavailable. A missing optional CLI is reported as not found and does not change the status exit code.
 

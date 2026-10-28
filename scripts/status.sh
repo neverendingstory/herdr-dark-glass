@@ -8,6 +8,9 @@ CONFIG_DIR="${HERDR_PLUGIN_CONFIG_DIR:-$HOME/.config/herdr/plugins/config/linyu.
 STATE_DIR="${HERDR_PLUGIN_STATE_DIR:-$HOME/.config/herdr/plugin-state/linyu.social-glass}"
 OPENCODE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/opencode"
 OPENCODE_STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/opencode"
+GROK_DIR="${GROK_CONFIG_DIR:-$HOME/.grok}"
+GROK_CONFIG="$GROK_DIR/config.toml"
+AWK="${AWK_BIN_PATH:-/usr/bin/awk}"
 OSASCRIPT="${OSASCRIPT_BIN_PATH:-osascript}"
 CYCLE_PROFILE_NAMES=(
   'Herdr Dark Glass Glass'
@@ -114,7 +117,59 @@ PY
   printf '%s\n' 'verify in OpenCode with /themes'
 }
 
-printf 'Herdr Social Glass 1.3\n\n'
+grok_theme_status() {
+  if [[ ! -f "$GROK_CONFIG" ]]; then
+    printf '%s\n' 'missing'
+    return
+  fi
+
+  if ! command -v "$AWK" >/dev/null 2>&1; then
+    printf '%s\n' 'unavailable'
+    return
+  fi
+
+  "$AWK" -f - "$GROK_CONFIG" <<'AWK'
+{
+  line = $0
+  if (line ~ /^[[:space:]]*\[/) {
+    section = line
+    sub(/^[[:space:]]*\[/, "", section)
+    sub(/\].*$/, "", section)
+    gsub(/[[:space:]]/, "", section)
+    next
+  }
+  if (section == "ui" && line ~ /^[[:space:]]*theme[[:space:]]*=/) {
+    value = line
+    sub(/^[^=]*=[[:space:]]*/, "", value)
+    sub(/[[:space:]]*$/, "", value)
+    sub(/^"/, "", value)
+    sub(/"$/, "", value)
+    theme = value
+  }
+  if (section == "features" && line ~ /^[[:space:]]*terminal_theme[[:space:]]*=/) {
+    value = line
+    sub(/^[^=]*=[[:space:]]*/, "", value)
+    sub(/[[:space:]]*$/, "", value)
+    enabled = value
+  }
+}
+
+END {
+  if (theme == "") {
+    print "unset"
+  } else {
+    print theme
+  }
+  if (enabled == "true") {
+    print "rollout gate enabled"
+  } else {
+    print "rollout gate disabled"
+  }
+}
+AWK
+}
+
+printf 'Herdr Social Glass 1.4\n\n'
 printf 'Herdr:  %s\n' "$("$HERDR" --version)"
 printf 'Config: %s\n' "$CONFIG_FILE"
 printf 'Social: %s\n' "$ROOT/theme/social-glass.toml"
@@ -152,6 +207,17 @@ else
 fi
 printf 'OpenCode saved preference: %s\n' "$(opencode_selection_status)"
 printf '%s\n' 'OpenCode active theme: verify in OpenCode with /themes'
+
+GROK_THEME_STATE="$(grok_theme_status)"
+GROK_THEME_NAME="$(printf '%s\n' "$GROK_THEME_STATE" | sed -n '1p')"
+GROK_THEME_GATE="$(printf '%s\n' "$GROK_THEME_STATE" | sed -n '2p')"
+if [[ "$GROK_THEME_NAME" == 'terminal' && "$GROK_THEME_GATE" == 'rollout gate enabled' ]]; then
+  printf 'Grok theme: %s, %s (Dark Glass applied)\n' "$GROK_THEME_NAME" "$GROK_THEME_GATE"
+elif [[ "$GROK_THEME_NAME" == 'missing' ]]; then
+  printf 'Grok theme: missing\n'
+else
+  printf 'Grok theme: %s, %s (Dark Glass not applied)\n' "$GROK_THEME_NAME" "$GROK_THEME_GATE"
+fi
 
 printf '\nCLI compatibility:\n'
 bash "$ROOT/scripts/cli-compat-status.sh"

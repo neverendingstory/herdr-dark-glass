@@ -13,7 +13,7 @@ for script in "$ROOT"/scripts/*.sh; do
   bash -n "$script"
 done
 
-"$TEST_PYTHON" - "$ROOT/herdr-plugin.toml" "$ROOT/theme/social-glass.toml" "$ROOT/theme/island-glass.toml" "$ROOT/theme/dark-glass.toml" <<'PY'
+"$TEST_PYTHON" - "$ROOT/herdr-plugin.toml" "$ROOT/theme/social-glass.toml" "$ROOT/theme/island-glass.toml" "$ROOT/theme/dark-glass.toml" "$ROOT/integrations/grok/dark-glass.toml" <<'PY'
 import os
 import pathlib
 import re
@@ -23,11 +23,12 @@ import tomllib
 if not __debug__:
     raise RuntimeError("smoke assertions require assertions; do not use PYTHONOPTIMIZE")
 
-manifest_path, social_path, island_path, dark_path = map(pathlib.Path, sys.argv[1:])
+manifest_path, social_path, island_path, dark_path, grok_theme_path = map(pathlib.Path, sys.argv[1:])
 manifest = tomllib.loads(manifest_path.read_text())
 social = tomllib.loads(social_path.read_text())
 island = tomllib.loads(island_path.read_text())
 dark = tomllib.loads(dark_path.read_text())
+grok_theme = tomllib.loads(grok_theme_path.read_text())
 
 HEREDOC_START = re.compile(
     r"<<-?[ \t]*(?:(['\"])([A-Za-z_][A-Za-z0-9_]*)\1|([A-Za-z_][A-Za-z0-9_]*))"
@@ -82,14 +83,35 @@ assert not DEFAULTS_MUTATION.search(executable_shell_source("cat <<'GUIDE'\n$(/u
 assert DEFAULTS_MUTATION.search(executable_shell_source("cat <<GUIDE\n$(/usr/bin/defaults write com.apple.Terminal value)\nGUIDE\n"))
 assert PRIVATE_STATE.search(executable_shell_source("cat <<GUIDE\nrm -rf \"$HOME/.claude\"\nGUIDE\n"))
 
+# No script may read or write another CLI's private state, and no script may
+# touch credentials. Grok state is reachable only from the scripts that
+# implement the Grok theme, and only for its configuration file.
+OTHER_CLI_STATE = re.compile(r"(?ix)(?<![a-z0-9_-])\.(?:claude|codex)(?![a-z0-9_-])")
+CREDENTIAL_STATE = re.compile(
+    r"(?ix)(?<![a-z0-9_])(?:credentials?|tokens?|auth(?:entication)?|oauth|api[-_]?key|secrets?)(?![a-z0-9_])"
+)
+GROK_STATE = re.compile(r"(?i)(?<![a-z0-9_-])\.grok(?![a-z0-9_-])")
+GROK_STATE_SCRIPTS = {"apply-dark-glass-grok.sh", "status.sh"}
+
 for script_path in sorted((manifest_path.parent / "scripts").glob("*.sh")):
     executable = executable_shell_source(script_path.read_text())
     assert not DEFAULTS_MUTATION.search(executable), f"Terminal defaults mutation: {script_path}"
     assert not TUI_PATH.search(executable), f"OpenCode TUI access: {script_path}"
-    assert not PRIVATE_STATE.search(executable), f"private CLI state access: {script_path}"
+    assert not OTHER_CLI_STATE.search(executable), f"other CLI state access: {script_path}"
+    assert not CREDENTIAL_STATE.search(executable), f"credential access: {script_path}"
+    if GROK_STATE.search(executable):
+        assert script_path.name in GROK_STATE_SCRIPTS, f"unapproved Grok state access: {script_path}"
+
+for script_name in sorted(GROK_STATE_SCRIPTS):
+    script_path = manifest_path.parent / "scripts" / script_name
+    assert script_path.is_file(), f"missing Grok theme script: {script_name}"
+    executable = executable_shell_source(script_path.read_text())
+    assert GROK_STATE.search(executable), f"Grok theme script never uses the Grok path: {script_name}"
+    assert not OTHER_CLI_STATE.search(executable), f"Grok theme script touches other CLI state: {script_name}"
+    assert not CREDENTIAL_STATE.search(executable), f"Grok theme script touches credentials: {script_name}"
 
 assert manifest["id"] == "linyu.social-glass"
-assert manifest["version"] == "1.3.0"
+assert manifest["version"] == "1.4.0"
 assert manifest["min_herdr_version"] == "0.8.2"
 assert manifest["platforms"] == ["macos"]
 
@@ -99,6 +121,7 @@ assert set(actions) == {
     "apply-island",
     "apply-dark-glass",
     "setup-dark-glass",
+    "apply-dark-glass-grok",
     "restore",
     "open-window",
     "open-island-window",
@@ -113,6 +136,7 @@ assert actions["status"]["command"] == ["bash", "scripts/status.sh"]
 assert actions["apply-island"]["command"] == ["bash", "scripts/apply-island.sh"]
 assert actions["apply-dark-glass"]["command"] == ["bash", "scripts/apply-dark-glass.sh"]
 assert actions["setup-dark-glass"]["command"] == ["bash", "scripts/setup-dark-glass.sh"]
+assert actions["apply-dark-glass-grok"]["command"] == ["bash", "scripts/apply-dark-glass-grok.sh"]
 assert actions["open-island-window"]["command"] == ["bash", "scripts/open-island-window.sh"]
 assert actions["open-dark-glass-window"]["command"] == ["bash", "scripts/open-dark-glass-window.sh"]
 assert actions["cycle-dark-glass-opacity"]["command"] == ["bash", "scripts/cycle-dark-glass-opacity.sh"]
@@ -194,6 +218,11 @@ assert dark_ui["sidebar"]["agents"] == {
         ],
     ],
 }
+
+# Grok Build has no importable theme file, so the Grok theme is the built-in
+# terminal theme plus the rollout gate that reveals it.
+assert grok_theme["features"]["terminal_theme"] is True
+assert grok_theme["ui"]["theme"] == "terminal"
 assert dark_ui["sidebar"]["spaces"] == {
     "row_gap": 1,
     "rows": [
@@ -238,7 +267,9 @@ for relative in (
     "scripts/open-island-window.sh",
     "scripts/open-dark-glass-window.sh",
     "scripts/cycle-dark-glass-opacity.sh",
+    "scripts/apply-dark-glass-grok.sh",
     "tests/dark-glass-opacity.sh",
+    "tests/dark-glass-grok.sh",
     "tests/functional.sh",
 ):
     assert os.access(manifest_path.parent / relative, os.X_OK), f"not executable: {relative}"
@@ -308,7 +339,7 @@ for removed_heading in (
 ):
     assert removed_heading not in readme
 
-assert "HERDR SOCIAL GLASS 1.3" in guide
+assert "HERDR SOCIAL GLASS 1.4" in guide
 assert "183;214;163" in guide
 assert "185;190;185" in guide
 assert "Social Glass + Island Glass + Dark Glass workspace presets." in guide
@@ -318,5 +349,6 @@ PY
 bash "$ROOT/tests/dark-glass-setup.sh"
 bash "$ROOT/tests/dark-glass-launcher.sh"
 bash "$ROOT/tests/dark-glass-opacity.sh"
+bash "$ROOT/tests/dark-glass-grok.sh"
 
 printf 'smoke tests passed\n'

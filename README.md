@@ -23,22 +23,23 @@ Terminal owns the canvas: Glass `46%`, Clear `60%`, Read `74%`, and Focus `88%` 
 herdr plugin install neverendingstory/herdr-dark-glass
 herdr plugin action invoke setup-dark-glass --plugin linyu.social-glass
 herdr plugin action invoke apply-dark-glass --plugin linyu.social-glass
+herdr plugin action invoke apply-dark-glass-grok --plugin linyu.social-glass
 herdr plugin action invoke status --plugin linyu.social-glass
 herdr plugin action invoke open-dark-glass-window --plugin linyu.social-glass
 ```
 
-`setup-dark-glass` installs the OpenCode asset and visibly imports any missing Glass, Clear, Read, and Focus profiles. Complete Terminal’s import dialog, then rerun setup/status to verify them. `open-dark-glass-window` launches only after its selected profile exists.
+`setup-dark-glass` installs the OpenCode asset and visibly imports any missing Glass, Clear, Read, and Focus profiles. Complete Terminal’s import dialog, then rerun setup/status to verify them. `open-dark-glass-window` launches only after its selected profile exists. `apply-dark-glass-grok` is opt-in: it backs up the Grok configuration, then writes only the two settings the Grok theme needs.
 
 ### CLI 配色 / CLI themes
 
-在 Dark Glass 窗口中完成选择；插件只安装 OpenCode 主题，不会配置其他 CLI。 Make selections in a Dark Glass window; the plugin installs only the OpenCode theme.
+在 Dark Glass 窗口中完成选择；插件只安装 OpenCode 主题，Grok 需要显式执行 `apply-dark-glass-grok` 才会写入，Claude Code 不会被配置。 Make selections in a Dark Glass window; the plugin installs only the OpenCode theme, writes Grok only through the explicit `apply-dark-glass-grok` action, and never configures Claude Code.
 
 | CLI | 设置 / Setting |
 | --- | --- |
 | OpenCode | `/themes` → `herdr-dark-glass`；再用 `Ctrl+P`：若显示 `Switch to dark mode` 则执行；已为深色时仅在显示 `Lock theme mode` 时执行后者 |
 | Claude Code | `/theme` → `dark-ansi`；选择会全局持久化 / selection persists globally |
 | Codex CLI | 正常启动；背景由 Terminal 管理 / run normally; Terminal owns the canvas |
-| Grok Build 1.0.40 | 没有 custom `herdr-dark-glass` theme。`terminal`、`terminal-default`、`transparent`、`native` aliases are rollout-gated; bare `/theme transparent` fails until enabled. Start with `GROK_TERMINAL_THEME=1 GROK_THEME=terminal grok`. Persistent config: `[features] terminal_theme = true`; `[ui] theme = "terminal"`. |
+| Grok Build 1.0.70 | 没有可导入的主题文件；Dark Glass 映射到内置 `terminal` 主题（aliases `terminal`、`terminal-default`、`transparent`、`native`），它借用 Terminal profile 调色板并保留画布。These aliases are rollout-gated; bare `/theme transparent` fails until enabled. Start with `GROK_TERMINAL_THEME=1 GROK_THEME=terminal grok`. Persistent config: `[features] terminal_theme = true`; `[ui] theme = "terminal"`. 或运行 `apply-dark-glass-grok` 自动写入 / or run `apply-dark-glass-grok` to write both settings. |
 
 ### 日常启动 / Daily launch
 

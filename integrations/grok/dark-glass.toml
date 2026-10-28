@@ -1,0 +1,21 @@
+# Herdr Dark Glass — Grok Build theme
+#
+# Grok Build cannot load a theme file. `ui.theme` only names one of the six
+# built-in themes, and the bundled `.tmTheme` syntax files are compiled into
+# the binary, so they cannot be replaced either. Dark Glass therefore maps to
+# the built-in `terminal` theme, which paints no colors of its own and takes
+# them from the Terminal profile instead.
+#
+# Under the "Herdr Dark Glass Read" profile that means Grok renders the Dark
+# Glass ANSI palette (accent #B7D6A3, text #F5F3ED, red #E78284, green
+# #A6D189, blue #8BD5FF, magenta #C4A7E7) straight onto the translucent
+# #080E14 canvas — the same color language as the OpenCode integration.
+#
+# The `terminal` theme is still rollout-gated, so `features.terminal_theme`
+# must be enabled before Grok accepts the name.
+
+[features]
+terminal_theme = true
+
+[ui]
+theme = "terminal"

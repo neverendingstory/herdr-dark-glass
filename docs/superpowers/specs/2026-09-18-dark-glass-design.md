@@ -63,7 +63,9 @@ The requested result is a third visual mode resembling a dark desktop glass surf
 - Claude Code provides a built-in `dark-ansi` theme through `/theme`; it uses the terminal's ANSI palette rather than owning the Terminal profile.
 - Claude Code accepts custom themes as JSON files in `~/.claude/themes/`, with `name`, `base`, and `overrides`; the filename without its extension is the slug and the selection is stored as `custom:<slug>` in `~/.claude/settings.json`.
 - Claude Code has no transparent color value: it accepts `#rrggbb`, `#rgb`, `rgb(r,g,b)`, `ansi256(n)`, and `ansi:<name>`. Every background token is therefore a solid fill, and the shipped theme pins the canvas colour on each of them instead of pretending they can be transparent.
-- `composerSidebarBackground` paints the panel beside the conversation and is only rendered in fullscreen mode. `userMessageBackground`, `bashMessageBackgroundColor`, and `memoryBackgroundColor` are painted in both renderers.
+- Measured against Claude Code 2.1.281: a hex override is applied and rendered as truecolor, while an eight-digit hex carrying an alpha channel is rejected and falls back to the base theme, exactly like an invalid value. There is no way to express transparency.
+- The panel beside the conversation is drawn as `backgroundColor: "composerSidebarBackground"`, a solid fill, and no setting removes it. The only measured way to make it see-through is `NO_COLOR=1`, which drops every color Claude Code emits, background and foreground alike, and leaves a monochrome interface.
+- `composerSidebarBackground` is only rendered in fullscreen mode. `userMessageBackground`, `bashMessageBackgroundColor`, and `memoryBackgroundColor` are painted in both renderers.
 - The plugin installs that theme file and records the selection only through the explicit `apply-dark-glass-themes` action. It never reads or writes `~/.claude.json`, project settings, or credentials.
 - The verified manual baseline is Claude Code `2.1.281`.
 
@@ -224,7 +226,7 @@ Added and removed diff foregrounds remain `#A6D189` and `#E78284`; borders and l
 
 The Grok theme is therefore the built-in `terminal` theme rather than a color scheme of its own. That theme paints no colors of its own: it borrows the Terminal profile's ANSI palette and leaves the canvas visible, so under the `Herdr Dark Glass Read` profile it renders the same Dark Glass palette as the OpenCode integration (accent `#B7D6A3`, text `#F5F3ED`, red `#E78284`, green `#A6D189`, blue `#8BD5FF`, magenta `#C4A7E7`) directly on the translucent `#080E14` canvas. Because Grok never asks a multiplexer for its terminal colors, running it under Herdr leaves the message band off entirely, so Grok sits on the glass canvas instead of painting a panel over it.
 
-Claude Code cannot express transparency, so its local surfaces stay solid fills. They are pinned to the canvas colour rather than to a neutral panel colour, which keeps them visually part of the glass instead of reading as a separate grey block. Codex CLI remains a compatibility-and-documentation contract rather than automatic configuration. Localized state backgrounds remain acceptable, and the Terminal profile remains the sole owner of full-window opacity and blur.
+Claude Code cannot express transparency, so its local surfaces stay solid fills. They are pinned to the canvas colour rather than to a neutral panel colour, which keeps them as close to the glass as a solid fill can get, but the wallpaper still does not show through them. Codex CLI remains a compatibility-and-documentation contract rather than automatic configuration. Localized state backgrounds remain acceptable, and the Terminal profile remains the sole owner of full-window opacity and blur.
 
 #### Read-only CLI Discovery
 

@@ -38,7 +38,7 @@ herdr plugin action invoke open-dark-glass-window --plugin linyu.social-glass
 | CLI | 设置 / Setting |
 | --- | --- |
 | OpenCode | `/themes` → `herdr-dark-glass`；再用 `Ctrl+P`：若显示 `Switch to dark mode` 则执行；已为深色时仅在显示 `Lock theme mode` 时执行后者 |
-| Claude Code | `/theme` → `Herdr Dark Glass`；选择会全局持久化 / selection persists globally |
+| Claude Code | `/theme` → `Herdr Dark Glass`；选择会全局持久化 / selection persists globally。Claude Code 没有透明色，右侧栏恒为实色填充；要让它完全透出玻璃只能 `NO_COLOR=1 claude`（会失去全部颜色）/ Claude Code has no transparent colour, so the side panel is always a solid fill; `NO_COLOR=1 claude` makes it fully see-through but drops every colour |
 | Codex CLI | 正常启动；背景由 Terminal 管理 / run normally; Terminal owns the canvas |
 | Grok Build 1.0.70 | 没有可导入的主题文件；Dark Glass 映射到内置 `terminal` 主题（aliases `terminal`、`terminal-default`、`transparent`、`native`），它借用 Terminal profile 调色板并保留画布。These aliases are rollout-gated; bare `/theme transparent` fails until enabled. Start with `GROK_TERMINAL_THEME=1 GROK_THEME=terminal grok`. Persistent config: `[features] terminal_theme = true`; `[ui] theme = "terminal"`. 或运行 `apply-dark-glass-grok` 自动写入 / or run `apply-dark-glass-grok` to write both settings. |
 

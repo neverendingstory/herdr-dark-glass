@@ -26,6 +26,7 @@
     "background": "none",
     "backgroundPanel": "none",
     "backgroundElement": "none",
+    "backgroundMenu": "#080E14",
     "border": "border",
     "borderActive": "accent",
     "borderSubtle": "subtle",

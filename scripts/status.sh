@@ -10,6 +10,10 @@ OPENCODE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/opencode"
 OPENCODE_STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/opencode"
 GROK_DIR="${GROK_CONFIG_DIR:-$HOME/.grok}"
 GROK_CONFIG="$GROK_DIR/config.toml"
+OPENCODE_CLI_CONFIG="$OPENCODE_DIR/cli.json"
+CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+CLAUDE_SETTINGS="$CLAUDE_DIR/settings.json"
+CLAUDE_THEME_FILE="$CLAUDE_DIR/themes/herdr-dark-glass.json"
 AWK="${AWK_BIN_PATH:-/usr/bin/awk}"
 OSASCRIPT="${OSASCRIPT_BIN_PATH:-osascript}"
 CYCLE_PROFILE_NAMES=(
@@ -169,7 +173,69 @@ END {
 AWK
 }
 
-printf 'Herdr Social Glass 1.4\n\n'
+claude_selection_status() {
+  if [[ ! -f "$CLAUDE_SETTINGS" ]]; then
+    printf '%s\n' 'not set'
+    return
+  fi
+  if ! command -v python3 >/dev/null 2>&1; then
+    printf '%s\n' 'unavailable'
+    return
+  fi
+  python3 - "$CLAUDE_SETTINGS" <<'PY' 2>/dev/null || printf '%s\n' 'unavailable'
+import json
+import sys
+
+try:
+    with open(sys.argv[1], encoding="utf-8") as handle:
+        data = json.load(handle)
+except (OSError, ValueError, UnicodeError):
+    print("unavailable")
+    raise SystemExit(0)
+
+value = data.get("theme") if isinstance(data, dict) else None
+if isinstance(value, str) and value and all(" " <= character <= "~" for character in value):
+    print(value)
+else:
+    print("not set")
+PY
+}
+
+opencode_cli_selection_status() {
+  if [[ ! -f "$OPENCODE_CLI_CONFIG" ]]; then
+    printf '%s\n' 'not set'
+    return
+  fi
+  if ! command -v python3 >/dev/null 2>&1; then
+    printf '%s\n' 'unavailable'
+    return
+  fi
+  python3 - "$OPENCODE_CLI_CONFIG" <<'PY' 2>/dev/null || printf '%s\n' 'unavailable'
+import json
+import sys
+
+try:
+    with open(sys.argv[1], encoding="utf-8") as handle:
+        data = json.load(handle)
+except (OSError, ValueError, UnicodeError):
+    print("unavailable")
+    raise SystemExit(0)
+
+theme = data.get("theme") if isinstance(data, dict) else None
+if isinstance(theme, dict) and isinstance(theme.get("name"), str) and theme["name"]:
+    mode = theme.get("mode")
+    if isinstance(mode, str) and mode:
+        print(f"{theme['name']} (mode {mode})")
+    else:
+        print(theme["name"])
+elif isinstance(theme, str) and theme:
+    print(theme)
+else:
+    print("not set")
+PY
+}
+
+printf 'Herdr Social Glass 1.5\n\n'
 printf 'Herdr:  %s\n' "$("$HERDR" --version)"
 printf 'Config: %s\n' "$CONFIG_FILE"
 printf 'Social: %s\n' "$ROOT/theme/social-glass.toml"
@@ -206,7 +272,17 @@ else
   printf 'OpenCode theme: installed but locally modified\n'
 fi
 printf 'OpenCode saved preference: %s\n' "$(opencode_selection_status)"
+printf 'OpenCode selected theme: %s\n' "$(opencode_cli_selection_status)"
 printf '%s\n' 'OpenCode active theme: verify in OpenCode with /themes'
+
+if [[ ! -f "$CLAUDE_THEME_FILE" ]]; then
+  printf 'Claude Code theme: missing\n'
+elif cmp -s "$ROOT/integrations/claude/herdr-dark-glass.json" "$CLAUDE_THEME_FILE"; then
+  printf 'Claude Code theme: installed and current\n'
+else
+  printf 'Claude Code theme: installed but locally modified\n'
+fi
+printf 'Claude Code selected theme: %s\n' "$(claude_selection_status)"
 
 GROK_THEME_STATE="$(grok_theme_status)"
 GROK_THEME_NAME="$(printf '%s\n' "$GROK_THEME_STATE" | sed -n '1p')"

@@ -1,0 +1,14 @@
+{
+  "name": "Herdr Dark Glass",
+  "base": "dark-ansi",
+  "overrides": {
+    "composerSidebarBackground": "#080E14",
+    "userMessageBackground": "#080E14",
+    "userMessageBackgroundHover": "#101922",
+    "bashMessageBackgroundColor": "#080E14",
+    "memoryBackgroundColor": "#080E14",
+    "selectionBg": "#29332D",
+    "claude": "#B7D6A3",
+    "claudeShimmer": "#8BD5FF"
+  }
+}

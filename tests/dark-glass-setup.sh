@@ -26,9 +26,11 @@ export HOME="$TMP/home"
 export HERDR_PLUGIN_ROOT="$ROOT"
 export HERDR_PLUGIN_STATE_DIR="$TMP/state"
 export XDG_CONFIG_HOME="$TMP/xdg-config"
+export CLAUDE_CONFIG_DIR="$TMP/claude"
 OPENCODE_HOME="$XDG_CONFIG_HOME/opencode"
+CLAUDE_THEME_HOME="$CLAUDE_CONFIG_DIR/themes"
 export PATH="$TMP/bin:$PATH"
-mkdir -p "$HOME" "$TMP/bin"
+mkdir -p "$HOME" "$TMP/bin" "$CLAUDE_THEME_HOME"
 
 cat > "$TMP/bin/osascript" <<'MOCK_OSASCRIPT'
 #!/usr/bin/env bash
@@ -253,7 +255,11 @@ grep -Fq 'apply-dark-glass-grok' "$TMP/first-install.out" || fail 'setup did not
 grep -Fq 'rollout-gated; a bare /theme transparent fails until enabled' "$TMP/first-install.out" || fail 'setup did not explain Grok rollout gating'
 grep -Fq 'GROK_TERMINAL_THEME=1 GROK_THEME=terminal grok' "$TMP/first-install.out" || fail 'setup did not give the exact Grok launch command'
 grep -Fq '[features] terminal_theme = true and [ui] theme = "terminal"' "$TMP/first-install.out" || fail 'setup did not give Grok persistent configuration guidance'
-grep -Fq 'dark-ansi' "$TMP/first-install.out" || fail 'setup did not name the persistent Claude Code theme'
+grep -Fq 'Herdr Dark Glass' "$TMP/first-install.out" || fail 'setup did not name the persistent Claude Code theme'
+grep -Fq 'apply-dark-glass-themes' "$TMP/first-install.out" || fail 'setup did not point at the CLI theme action'
+cmp "$ROOT/integrations/claude/herdr-dark-glass.json" \
+  "$CLAUDE_THEME_HOME/herdr-dark-glass.json" || fail 'the Claude Code theme was not installed'
+grep -Fq "$CLAUDE_THEME_HOME/herdr-dark-glass.json" "$TMP/first-install.out" || fail 'setup did not report the Claude Code theme path'
 grep -Fq 'name of every settings set' "$MOCK_OSASCRIPT_STDIN" || fail 'setup did not enumerate Terminal profile names'
 printf '%s\n' - 'Herdr Dark Glass Glass' 'Herdr Dark Glass Clear' 'Herdr Dark Glass Read' 'Herdr Dark Glass Focus' > "$TMP/expected-query.args"
 cmp -s "$TMP/expected-query.args" "$MOCK_OSASCRIPT_ARGS" || fail 'setup did not query all cycle profiles as separate argv values'

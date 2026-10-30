@@ -1,6 +1,6 @@
 id = "linyu.social-glass"
 name = "Herdr Social Glass"
-version = "1.4.0"
+version = "1.5.0"
 min_herdr_version = "0.8.2"
 description = "Three screenshot-friendly workspace themes and macOS Terminal launchers for Herdr, including transparent Dark Glass integrations."
 platforms = ["macos"]
@@ -29,6 +29,11 @@ command = ["bash", "scripts/setup-dark-glass.sh"]
 id = "apply-dark-glass-grok"
 title = "Apply Dark Glass theme to Grok Build"
 command = ["bash", "scripts/apply-dark-glass-grok.sh"]
+
+[[actions]]
+id = "apply-dark-glass-themes"
+title = "Apply Dark Glass themes to OpenCode and Claude Code"
+command = ["bash", "scripts/apply-dark-glass-themes.sh"]
 
 [[actions]]
 id = "restore"

@@ -13,22 +13,25 @@ for script in "$ROOT"/scripts/*.sh; do
   bash -n "$script"
 done
 
-"$TEST_PYTHON" - "$ROOT/herdr-plugin.toml" "$ROOT/theme/social-glass.toml" "$ROOT/theme/island-glass.toml" "$ROOT/theme/dark-glass.toml" "$ROOT/integrations/grok/dark-glass.toml" <<'PY'
+"$TEST_PYTHON" - "$ROOT/herdr-plugin.toml" "$ROOT/theme/social-glass.toml" "$ROOT/theme/island-glass.toml" "$ROOT/theme/dark-glass.toml" "$ROOT/integrations/grok/dark-glass.toml" "$ROOT/integrations/opencode/herdr-dark-glass.json" "$ROOT/integrations/claude/herdr-dark-glass.json" <<'PY'
 import os
 import pathlib
 import re
 import sys
+import json
 import tomllib
 
 if not __debug__:
     raise RuntimeError("smoke assertions require assertions; do not use PYTHONOPTIMIZE")
 
-manifest_path, social_path, island_path, dark_path, grok_theme_path = map(pathlib.Path, sys.argv[1:])
+manifest_path, social_path, island_path, dark_path, grok_theme_path, opencode_theme_path, claude_theme_path = map(pathlib.Path, sys.argv[1:])
 manifest = tomllib.loads(manifest_path.read_text())
 social = tomllib.loads(social_path.read_text())
 island = tomllib.loads(island_path.read_text())
 dark = tomllib.loads(dark_path.read_text())
 grok_theme = tomllib.loads(grok_theme_path.read_text())
+opencode_theme = json.loads(opencode_theme_path.read_text())
+claude_theme = json.loads(claude_theme_path.read_text())
 
 HEREDOC_START = re.compile(
     r"<<-?[ \t]*(?:(['\"])([A-Za-z_][A-Za-z0-9_]*)\1|([A-Za-z_][A-Za-z0-9_]*))"
@@ -83,35 +86,35 @@ assert not DEFAULTS_MUTATION.search(executable_shell_source("cat <<'GUIDE'\n$(/u
 assert DEFAULTS_MUTATION.search(executable_shell_source("cat <<GUIDE\n$(/usr/bin/defaults write com.apple.Terminal value)\nGUIDE\n"))
 assert PRIVATE_STATE.search(executable_shell_source("cat <<GUIDE\nrm -rf \"$HOME/.claude\"\nGUIDE\n"))
 
-# No script may read or write another CLI's private state, and no script may
-# touch credentials. Grok state is reachable only from the scripts that
-# implement the Grok theme, and only for its configuration file.
-OTHER_CLI_STATE = re.compile(r"(?ix)(?<![a-z0-9_-])\.(?:claude|codex)(?![a-z0-9_-])")
+# No script may touch credentials, and each script may reach only the CLI
+# private paths it is explicitly allowed to reach.
 CREDENTIAL_STATE = re.compile(
     r"(?ix)(?<![a-z0-9_])(?:credentials?|tokens?|auth(?:entication)?|oauth|api[-_]?key|secrets?)(?![a-z0-9_])"
 )
-GROK_STATE = re.compile(r"(?i)(?<![a-z0-9_-])\.grok(?![a-z0-9_-])")
-GROK_STATE_SCRIPTS = {"apply-dark-glass-grok.sh", "status.sh"}
+PRIVATE_PATH = re.compile(r"(?i)(?<![a-z0-9_-])\.(claude|codex|grok)(?![a-z0-9_-])")
+ALLOWED_PRIVATE_PATHS = {
+    "setup-dark-glass.sh": {"claude"},
+    "apply-dark-glass-themes.sh": {"claude"},
+    "apply-dark-glass-grok.sh": {"grok"},
+    "status.sh": {"claude", "grok"},
+}
 
 for script_path in sorted((manifest_path.parent / "scripts").glob("*.sh")):
     executable = executable_shell_source(script_path.read_text())
     assert not DEFAULTS_MUTATION.search(executable), f"Terminal defaults mutation: {script_path}"
     assert not TUI_PATH.search(executable), f"OpenCode TUI access: {script_path}"
-    assert not OTHER_CLI_STATE.search(executable), f"other CLI state access: {script_path}"
     assert not CREDENTIAL_STATE.search(executable), f"credential access: {script_path}"
-    if GROK_STATE.search(executable):
-        assert script_path.name in GROK_STATE_SCRIPTS, f"unapproved Grok state access: {script_path}"
+    touched = {match.group(1).lower() for match in PRIVATE_PATH.finditer(executable)}
+    allowed = ALLOWED_PRIVATE_PATHS.get(script_path.name, set())
+    assert touched <= allowed, (
+        f"unapproved private CLI state access: {script_path} ({sorted(touched - allowed)})"
+    )
 
-for script_name in sorted(GROK_STATE_SCRIPTS):
-    script_path = manifest_path.parent / "scripts" / script_name
-    assert script_path.is_file(), f"missing Grok theme script: {script_name}"
-    executable = executable_shell_source(script_path.read_text())
-    assert GROK_STATE.search(executable), f"Grok theme script never uses the Grok path: {script_name}"
-    assert not OTHER_CLI_STATE.search(executable), f"Grok theme script touches other CLI state: {script_name}"
-    assert not CREDENTIAL_STATE.search(executable), f"Grok theme script touches credentials: {script_name}"
+for script_name in sorted(ALLOWED_PRIVATE_PATHS):
+    assert (manifest_path.parent / "scripts" / script_name).is_file(), f"missing script: {script_name}"
 
 assert manifest["id"] == "linyu.social-glass"
-assert manifest["version"] == "1.4.0"
+assert manifest["version"] == "1.5.0"
 assert manifest["min_herdr_version"] == "0.8.2"
 assert manifest["platforms"] == ["macos"]
 
@@ -122,6 +125,7 @@ assert set(actions) == {
     "apply-dark-glass",
     "setup-dark-glass",
     "apply-dark-glass-grok",
+    "apply-dark-glass-themes",
     "restore",
     "open-window",
     "open-island-window",
@@ -137,6 +141,7 @@ assert actions["apply-island"]["command"] == ["bash", "scripts/apply-island.sh"]
 assert actions["apply-dark-glass"]["command"] == ["bash", "scripts/apply-dark-glass.sh"]
 assert actions["setup-dark-glass"]["command"] == ["bash", "scripts/setup-dark-glass.sh"]
 assert actions["apply-dark-glass-grok"]["command"] == ["bash", "scripts/apply-dark-glass-grok.sh"]
+assert actions["apply-dark-glass-themes"]["command"] == ["bash", "scripts/apply-dark-glass-themes.sh"]
 assert actions["open-island-window"]["command"] == ["bash", "scripts/open-island-window.sh"]
 assert actions["open-dark-glass-window"]["command"] == ["bash", "scripts/open-dark-glass-window.sh"]
 assert actions["cycle-dark-glass-opacity"]["command"] == ["bash", "scripts/cycle-dark-glass-opacity.sh"]
@@ -223,6 +228,24 @@ assert dark_ui["sidebar"]["agents"] == {
 # terminal theme plus the rollout gate that reveals it.
 assert grok_theme["features"]["terminal_theme"] is True
 assert grok_theme["ui"]["theme"] == "terminal"
+
+# The OpenCode theme keeps every surface transparent except the menu surface,
+# which supplies the colour OpenCode falls back to for its dialogs.
+opencode_theme_tokens = opencode_theme["theme"]
+assert opencode_theme_tokens["background"] == "none"
+assert opencode_theme_tokens["backgroundPanel"] == "none"
+assert opencode_theme_tokens["backgroundElement"] == "none"
+assert opencode_theme_tokens["backgroundMenu"] == "#080E14"
+
+# Claude Code cannot express transparency, so its theme pins the canvas colour
+# on every background token instead.
+assert claude_theme["base"] == "dark-ansi"
+claude_overrides = claude_theme["overrides"]
+assert claude_overrides["composerSidebarBackground"] == "#080E14"
+assert claude_overrides["userMessageBackground"] == "#080E14"
+assert claude_overrides["bashMessageBackgroundColor"] == "#080E14"
+assert claude_overrides["memoryBackgroundColor"] == "#080E14"
+assert claude_overrides["selectionBg"] == "#29332D"
 assert dark_ui["sidebar"]["spaces"] == {
     "row_gap": 1,
     "rows": [
@@ -268,8 +291,10 @@ for relative in (
     "scripts/open-dark-glass-window.sh",
     "scripts/cycle-dark-glass-opacity.sh",
     "scripts/apply-dark-glass-grok.sh",
+    "scripts/apply-dark-glass-themes.sh",
     "tests/dark-glass-opacity.sh",
     "tests/dark-glass-grok.sh",
+    "tests/dark-glass-themes.sh",
     "tests/functional.sh",
 ):
     assert os.access(manifest_path.parent / relative, os.X_OK), f"not executable: {relative}"
@@ -309,7 +334,8 @@ for value in (
     "`/themes` → `herdr-dark-glass`",
     "`Switch to dark mode`",
     "`Lock theme mode`",
-    "`/theme` → `dark-ansi`",
+    "`/theme` → `Herdr Dark Glass`",
+    "apply-dark-glass-themes",
     "selection persists globally",
     "GROK_TERMINAL_THEME=1 GROK_THEME=terminal grok",
     "terminal_theme = true",
@@ -339,7 +365,7 @@ for removed_heading in (
 ):
     assert removed_heading not in readme
 
-assert "HERDR SOCIAL GLASS 1.4" in guide
+assert "HERDR SOCIAL GLASS 1.5" in guide
 assert "183;214;163" in guide
 assert "185;190;185" in guide
 assert "Social Glass + Island Glass + Dark Glass workspace presets." in guide
@@ -350,5 +376,6 @@ bash "$ROOT/tests/dark-glass-setup.sh"
 bash "$ROOT/tests/dark-glass-launcher.sh"
 bash "$ROOT/tests/dark-glass-opacity.sh"
 bash "$ROOT/tests/dark-glass-grok.sh"
+bash "$ROOT/tests/dark-glass-themes.sh"
 
 printf 'smoke tests passed\n'

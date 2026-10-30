@@ -22,14 +22,22 @@ CYCLE_PROFILE_FILES=(
 SOURCE_THEME="$ROOT/integrations/opencode/herdr-dark-glass.json"
 THEME_DIRECTORY="$OPENCODE_HOME/themes"
 DEST_THEME="$THEME_DIRECTORY/herdr-dark-glass.json"
+CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+CLAUDE_THEME_DIRECTORY="$CLAUDE_DIR/themes"
+DEST_CLAUDE_THEME="$CLAUDE_THEME_DIRECTORY/herdr-dark-glass.json"
+SOURCE_CLAUDE_THEME="$ROOT/integrations/claude/herdr-dark-glass.json"
 THEME_DIRECTORY_PROBE="${THEME_DIRECTORY_PROBE_BIN_PATH:-}"
 STAMP="$(date +%Y%m%d-%H%M%S)-$$"
 TMP_THEME=""
+TMP_CLAUDE_THEME=""
 THEME_PROBE_FILE=""
 
 cleanup() {
   if [[ -n "$TMP_THEME" && -f "$TMP_THEME" ]]; then
     rm -f "$TMP_THEME"
+  fi
+  if [[ -n "$TMP_CLAUDE_THEME" && -f "$TMP_CLAUDE_THEME" ]]; then
+    rm -f "$TMP_CLAUDE_THEME"
   fi
   if [[ -n "$THEME_PROBE_FILE" && -f "$THEME_PROBE_FILE" ]]; then
     rm -f "$THEME_PROBE_FILE"
@@ -42,7 +50,7 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
   exit 1
 fi
 
-for source in "${CYCLE_PROFILE_FILES[@]}" "$SOURCE_THEME"; do
+for source in "${CYCLE_PROFILE_FILES[@]}" "$SOURCE_THEME" "$SOURCE_CLAUDE_THEME"; do
   if [[ ! -f "$source" ]]; then
     printf 'Required Dark Glass file is missing: %s\n' "$source" >&2
     exit 1
@@ -58,6 +66,16 @@ done
 
 if [[ -L "$DEST_THEME" ]] || [[ -e "$DEST_THEME" && ! -f "$DEST_THEME" ]]; then
   printf 'Refusing unsafe OpenCode theme destination: %s\n' "$DEST_THEME" >&2
+  exit 1
+fi
+
+if [[ -L "$DEST_CLAUDE_THEME" ]] || [[ -e "$DEST_CLAUDE_THEME" && ! -f "$DEST_CLAUDE_THEME" ]]; then
+  printf 'Refusing unsafe Claude Code theme destination: %s\n' "$DEST_CLAUDE_THEME" >&2
+  exit 1
+fi
+
+if [[ -e "$CLAUDE_THEME_DIRECTORY" && ! -d "$CLAUDE_THEME_DIRECTORY" ]]; then
+  printf 'Refusing unsafe Claude Code theme directory: %s\n' "$CLAUDE_THEME_DIRECTORY" >&2
   exit 1
 fi
 
@@ -173,7 +191,31 @@ else
   printf 'OpenCode theme installed at %s\n' "$DEST_THEME"
 fi
 
+if [[ -f "$DEST_CLAUDE_THEME" ]] && cmp -s "$SOURCE_CLAUDE_THEME" "$DEST_CLAUDE_THEME"; then
+  printf 'Claude Code theme is already current: %s\n' "$DEST_CLAUDE_THEME"
+else
+  if ! mkdir -p "$CLAUDE_THEME_DIRECTORY"; then
+    printf '%s\n' 'Unable to create the Claude Code theme directory.' >&2
+    exit 1
+  fi
+  if [[ -f "$DEST_CLAUDE_THEME" ]]; then
+    if ! mkdir -p "$STATE_DIR/backups"; then
+      printf '%s\n' 'Unable to create the plugin backup directory.' >&2
+      exit 1
+    fi
+    CLAUDE_BACKUP="$STATE_DIR/backups/claude-theme-$STAMP.json"
+    "$INSTALL" -m 600 "$DEST_CLAUDE_THEME" "$CLAUDE_BACKUP"
+    printf 'Existing Claude Code theme backed up to %s\n' "$CLAUDE_BACKUP"
+  fi
+  TMP_CLAUDE_THEME="$DEST_CLAUDE_THEME.tmp.$$"
+  "$INSTALL" -m 600 "$SOURCE_CLAUDE_THEME" "$TMP_CLAUDE_THEME"
+  mv "$TMP_CLAUDE_THEME" "$DEST_CLAUDE_THEME"
+  TMP_CLAUDE_THEME=""
+  printf 'Claude Code theme installed at %s\n' "$DEST_CLAUDE_THEME"
+fi
+
 printf '%s\n' 'OpenCode: run /themes and select herdr-dark-glass; then open Ctrl+P. Run Switch to dark mode if shown; when already dark, run Lock theme mode only if that action is shown.'
-printf '%s\n' 'Claude Code: run /theme and select dark-ansi; the selection persists globally.'
+printf '%s\n' 'Claude Code: run /theme and select Herdr Dark Glass; the selection persists globally.'
+printf '%s\n' 'Run the apply-dark-glass-themes action to select the installed OpenCode and Claude Code themes for you.'
 printf '%s\n' 'Codex CLI: run codex normally; tui.theme controls syntax only.'
 printf '%s\n' 'Grok Build 1.0.70 ships no importable theme file; Dark Glass maps to the built-in terminal theme (aliases terminal, terminal-default, transparent, native), which borrows the Terminal profile palette and keeps the canvas visible. The aliases are rollout-gated; a bare /theme transparent fails until enabled. Use GROK_TERMINAL_THEME=1 GROK_THEME=terminal grok, or run the apply-dark-glass-grok action to persist [features] terminal_theme = true and [ui] theme = "terminal".'

@@ -101,7 +101,7 @@ probe_cli() {
 }
 
 probe_cli 'OpenCode' opencode 'select herdr-dark-glass with /themes'
-probe_cli 'Claude Code' claude 'select dark-ansi with /theme'
+probe_cli 'Claude Code' claude 'select Herdr Dark Glass with /theme'
 probe_cli 'Codex CLI' codex 'terminal canvas compatible; no background setting required'
 probe_cli 'Grok Build' grok 'Grok 1.0.70 ships no importable theme file; Dark Glass maps to the built-in terminal theme (aliases terminal, terminal-default, transparent, native), which borrows the Terminal profile palette and keeps the canvas visible. The aliases are rollout-gated: enable with GROK_TERMINAL_THEME=1 GROK_THEME=terminal grok, or persist [features] terminal_theme = true; [ui] theme = "terminal". The apply-dark-glass-grok action writes those two settings.'
 

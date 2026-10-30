@@ -27,7 +27,7 @@ The requested result is a third visual mode resembling a dark desktop glass surf
 - Install or require a different terminal emulator.
 - Silently mutate `com.apple.Terminal` private preferences.
 - Overwrite OpenCode's `tui.json`, `tui.jsonc`, plugin list, or unrelated settings.
-- Install, upgrade, or authenticate OpenCode, Claude Code, Codex CLI, or Grok Build binaries; rewrite Claude, Codex, or Grok configuration; or rewrite OpenCode configuration outside the dedicated theme file.
+- Install, upgrade, or authenticate OpenCode, Claude Code, Codex CLI, or Grok Build binaries; or rewrite Claude, Codex, or Grok configuration beyond the two settings each CLI theme needs.
 - Add a separate Terminal-window action or wrapper for every supported CLI.
 - Claim that a CLI theme is selected when the CLI does not expose a reliable read-only selection signal.
 - Guarantee equal contrast over every possible wallpaper.
@@ -51,16 +51,21 @@ The requested result is a third visual mode resembling a dark desktop glass surf
 ### OpenCode
 
 - OpenCode user themes can set `background`, `backgroundPanel`, and `backgroundElement` to `none`, delegating those surfaces to the terminal.
+- OpenCode 2.2.2 still migrates a v1 theme file: `packages/theme/src/tui/v1-migrate.ts` maps the value `none` to a fully transparent color, so the shipped theme file stays valid.
+- The migration produces a document with a `light` and a `dark` section, and `selectThemeMode` falls back to the first section when the requested mode is absent. The selection therefore records `mode = "dark"`, otherwise a light-mode host resolves the light variant.
+- OpenCode deliberately paints its dialogs opaque: `dialogBackground` falls back to the first visible surface, and to solid black or white when every surface is transparent. The shipped theme therefore sets `backgroundMenu` to the canvas colour, so dialogs land on `#080E14` instead of an unrelated solid, while `background`, `backgroundPanel`, and `backgroundElement` stay transparent.
 - User themes are discovered from `~/.config/opencode/themes/*.json`.
-- Theme selection can be performed through `/themes`; the plugin will not rewrite OpenCode configuration or state to force selection.
+- Theme selection is stored in `~/.config/opencode/cli.json` under `theme`, as `name` plus an optional `mode`. The plugin records that selection only through the explicit `apply-dark-glass-themes` action.
 - Third-party OpenCode TUI extensions may still draw their own opaque backgrounds. This integration can control only the OpenCode theme contract.
 
 ### Claude Code
 
 - Claude Code provides a built-in `dark-ansi` theme through `/theme`; it uses the terminal's ANSI palette rather than owning the Terminal profile.
-- Claude Code does not provide OpenCode-style `none` background tokens. Local message, diff, memory, and selection surfaces may remain opaque while the full terminal canvas remains host-owned.
-- The plugin does not install a Claude theme and does not read or write `~/.claude/settings.json`, `~/.claude.json`, project settings, or credentials.
-- The verified manual baseline is Claude Code `2.1.274`.
+- Claude Code accepts custom themes as JSON files in `~/.claude/themes/`, with `name`, `base`, and `overrides`; the filename without its extension is the slug and the selection is stored as `custom:<slug>` in `~/.claude/settings.json`.
+- Claude Code has no transparent color value: it accepts `#rrggbb`, `#rgb`, `rgb(r,g,b)`, `ansi256(n)`, and `ansi:<name>`. Every background token is therefore a solid fill, and the shipped theme pins the canvas colour on each of them instead of pretending they can be transparent.
+- `composerSidebarBackground` paints the panel beside the conversation and is only rendered in fullscreen mode. `userMessageBackground`, `bashMessageBackgroundColor`, and `memoryBackgroundColor` are painted in both renderers.
+- The plugin installs that theme file and records the selection only through the explicit `apply-dark-glass-themes` action. It never reads or writes `~/.claude.json`, project settings, or credentials.
+- The verified manual baseline is Claude Code `2.1.281`.
 
 ### Codex CLI
 
@@ -213,13 +218,13 @@ Added and removed diff foregrounds remain `#A6D189` and `#E78284`; borders and l
 
 #### Claude Code, Codex CLI, and Grok Build
 
-- Claude Code users select `dark-ansi` with `/theme` so its colors follow the Terminal ANSI palette.
+- Claude Code users select the installed `Herdr Dark Glass` theme with `/theme`. It is built on `dark-ansi`, so its colors follow the Terminal ANSI palette, and it pins the canvas colour on the background tokens Claude Code cannot make transparent.
 - Codex users run `codex` normally; its main viewport retains the terminal default background, and `tui.theme` remains a syntax-only choice.
 - Grok 1.0.70 has NO importable Dark Glass theme file. Its built-in terminal aliases are rollout-gated, so bare `/theme transparent` fails until enabled. Users use `GROK_TERMINAL_THEME=1 GROK_THEME=terminal grok` for one session, persist `[features] terminal_theme = true` and `[ui] theme = "terminal"`, or run the `apply-dark-glass-grok` action, which writes exactly those two settings.
 
 The Grok theme is therefore the built-in `terminal` theme rather than a color scheme of its own. That theme paints no colors of its own: it borrows the Terminal profile's ANSI palette and leaves the canvas visible, so under the `Herdr Dark Glass Read` profile it renders the same Dark Glass palette as the OpenCode integration (accent `#B7D6A3`, text `#F5F3ED`, red `#E78284`, green `#A6D189`, blue `#8BD5FF`, magenta `#C4A7E7`) directly on the translucent `#080E14` canvas. Because Grok never asks a multiplexer for its terminal colors, running it under Herdr leaves the message band off entirely, so Grok sits on the glass canvas instead of painting a panel over it.
 
-Claude Code and Codex CLI remain a compatibility-and-documentation contract rather than automatic configuration. Localized state backgrounds remain acceptable, and the Terminal profile remains the sole owner of full-window opacity and blur.
+Claude Code cannot express transparency, so its local surfaces stay solid fills. They are pinned to the canvas colour rather than to a neutral panel colour, which keeps them visually part of the glass instead of reading as a separate grey block. Codex CLI remains a compatibility-and-documentation contract rather than automatic configuration. Localized state backgrounds remain acceptable, and the Terminal profile remains the sole owner of full-window opacity and blur.
 
 #### Read-only CLI Discovery
 
@@ -242,10 +247,10 @@ Behavior:
 1. Confirm the platform, required files, and safe destination type.
 2. Query all four dedicated Terminal cycle profiles as separate argv values before any OpenCode theme mutation.
 3. In one visible Terminal import request, open every missing bundled cycle profile.
-4. Install the OpenCode theme at `~/.config/opencode/themes/herdr-dark-glass.json` only after Terminal preflight/import succeeds.
-5. If the destination differs, back it up under the plugin state directory before replacement.
-6. Print the remaining user-controlled actions: select `herdr-dark-glass` through OpenCode `/themes`, select Claude Code `dark-ansi` through `/theme`, run Codex normally, and use the exact Grok terminal-theme enablement instructions.
-7. Never write Terminal private preferences; never modify OpenCode TUI configuration, selection state, plugin lists, or unrelated settings; and never modify Claude Code, Codex CLI, or Grok Build configuration.
+4. Install the OpenCode theme at `~/.config/opencode/themes/herdr-dark-glass.json` and the Claude Code theme at `~/.claude/themes/herdr-dark-glass.json` only after Terminal preflight/import succeeds.
+5. If a destination differs, back it up under the plugin state directory before replacement.
+6. Print the remaining user-controlled actions: select `herdr-dark-glass` through OpenCode `/themes`, select `Herdr Dark Glass` through Claude Code `/theme`, run Codex normally, and use the exact Grok terminal-theme enablement instructions.
+7. Never write Terminal private preferences; never modify OpenCode TUI configuration, selection state, plugin lists, or unrelated settings; never modify Claude Code, Codex CLI, or Grok Build configuration; and never record a theme selection on the user's behalf.
 
 The action may complete with the Terminal profile import still awaiting user confirmation. `status` provides the authoritative post-import check.
 
@@ -268,6 +273,25 @@ Behavior:
 7. Never read or write Grok credentials, and never touch another CLI's configuration.
 
 This is the only script permitted to reach Grok state, and it is opt-in: `setup-dark-glass` prints the instruction but never writes Grok configuration.
+
+### `apply-dark-glass-themes`
+
+Command:
+
+```text
+bash scripts/apply-dark-glass-themes.sh
+```
+
+Behavior:
+
+1. Confirm the destinations are regular files and not symlinks.
+2. Merge the theme selection into `~/.config/opencode/cli.json` as `theme.name = "herdr-dark-glass"` and `theme.mode = "dark"`, keeping every other key in that file.
+3. Merge the theme selection into `~/.claude/settings.json` as `theme = "custom:herdr-dark-glass"`, keeping every other key in that file.
+4. Back each file up under the plugin state directory before replacing it.
+5. Leave a file untouched and report the selection as current when it already holds it.
+6. Never read or write credentials, and never touch another CLI's configuration.
+
+This is the only script permitted to reach Claude Code state, and it is opt-in: `setup-dark-glass` installs the theme files and prints the instruction but never records a selection.
 
 ### `apply-dark-glass`
 
